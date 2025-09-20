@@ -13,86 +13,113 @@ import ru.yandex.practicum.kafka.telemetry.event.ConditionOperationAvro;
 import ru.yandex.practicum.kafka.telemetry.event.ActionTypeAvro;
 import ru.yandex.practicum.kafka.telemetry.event.ScenarioConditionAvro;
 import ru.yandex.practicum.kafka.telemetry.event.DeviceActionAvro;
-import ru.yandex.practicum.model.hub.*;
+import ru.yandex.practicum.model.hub.ActionType;
+import ru.yandex.practicum.model.hub.ConditionOperation;
+import ru.yandex.practicum.model.hub.ConditionType;
+import ru.yandex.practicum.model.hub.DeviceAction;
+import ru.yandex.practicum.model.hub.DeviceAddedEvent;
+import ru.yandex.practicum.model.hub.DeviceRemovedEvent;
+import ru.yandex.practicum.model.hub.DeviceType;
+import ru.yandex.practicum.model.hub.HubEvent;
+import ru.yandex.practicum.model.hub.ScenarioAddedEvent;
+import ru.yandex.practicum.model.hub.ScenarioCondition;
+import ru.yandex.practicum.model.hub.ScenarioRemovedEvent;
+
+import java.time.Instant;
 
 @Component
 public class HubEventMapper {
 
     public HubEventAvro toHubEventAvro(HubEvent hubEvent) {
-        return new HubEventAvro(
-                hubEvent.getHubId(),
-                hubEvent.getTimestamp(),
-                toHubEventPayloadAvro(hubEvent)
-        );
+        HubEventAvro avro = new HubEventAvro();
+        avro.setHubId(hubEvent.getHubId());
+        avro.setTimestamp(Instant.ofEpochSecond(hubEvent.getTimestamp().toEpochMilli()));
+        avro.setPayload(toHubEventPayloadAvro(hubEvent));
+        return avro;
     }
 
-    public SpecificRecordBase toHubEventPayloadAvro(HubEvent hubEvent) {
+    private SpecificRecordBase toHubEventPayloadAvro(HubEvent hubEvent) {
         switch (hubEvent.getType()) {
             case DEVICE_ADDED -> {
                 DeviceAddedEvent event = (DeviceAddedEvent) hubEvent;
-                return new DeviceAddedEventAvro(
-                        event.getId(),
-                        toDeviceTypeAvro(event.getDeviceType())
-                );
+                DeviceAddedEventAvro avro = new DeviceAddedEventAvro();
+                avro.setId(event.getId());
+                avro.setType(toDeviceTypeAvro(event.getDeviceType()));
+                return avro;
             }
 
             case DEVICE_REMOVED -> {
                 DeviceRemovedEvent event = (DeviceRemovedEvent) hubEvent;
-                return new DeviceRemovedEventAvro(
-                        event.getId()
-                );
+                DeviceRemovedEventAvro avro = new DeviceRemovedEventAvro();
+                avro.setId(event.getId());
+                return avro;
             }
 
             case SCENARIO_ADDED -> {
                 ScenarioAddedEvent event = (ScenarioAddedEvent) hubEvent;
-                return new ScenarioAddedEventAvro(
-                        event.getName(),
-                        event.getConditions().stream().map(HubEventMapper::toScenarioConditionAvro).toList(),
-                        event.getActions().stream().map(HubEventMapper::toDeviceActionAvro).toList()
-                );
+                ScenarioAddedEventAvro avro = new ScenarioAddedEventAvro();
+                avro.setName(event.getName());
+                avro.setConditions(event.getConditions().stream()
+                        .map(this::toScenarioConditionAvro)
+                        .collect(java.util.stream.Collectors.toList()));
+                avro.setActions(event.getActions().stream()
+                        .map(this::toDeviceActionAvro)
+                        .collect(java.util.stream.Collectors.toList()));
+                return avro;
             }
 
             case SCENARIO_REMOVED -> {
                 ScenarioRemovedEvent event = (ScenarioRemovedEvent) hubEvent;
-                return new ScenarioRemovedEventAvro(
-                        event.getName()
-                );
+                ScenarioRemovedEventAvro avro = new ScenarioRemovedEventAvro();
+                avro.setName(event.getName());
+                return avro;
             }
 
             default -> throw new IllegalStateException("Invalid payload");
         }
     }
 
-    public static DeviceTypeAvro toDeviceTypeAvro(DeviceType deviceType) {
+    private DeviceTypeAvro toDeviceTypeAvro(DeviceType deviceType) {
         return DeviceTypeAvro.valueOf(deviceType.name());
     }
 
-    public static ConditionTypeAvro toConditionTypeAvro(ConditionType conditionType) {
+    private ConditionTypeAvro toConditionTypeAvro(ConditionType conditionType) {
         return ConditionTypeAvro.valueOf(conditionType.name());
     }
 
-    public static ConditionOperationAvro toConditionOperationAvro(ConditionOperation conditionOperation) {
+    private ConditionOperationAvro toConditionOperationAvro(ConditionOperation conditionOperation) {
         return ConditionOperationAvro.valueOf(conditionOperation.name());
     }
 
-    public static ActionTypeAvro toActionTypeAvro(ActionType actionType) {
+    private ActionTypeAvro toActionTypeAvro(ActionType actionType) {
         return ActionTypeAvro.valueOf(actionType.name());
     }
 
-    public static ScenarioConditionAvro toScenarioConditionAvro(ScenarioCondition scenarioCondition) {
-        return new ScenarioConditionAvro(
-                scenarioCondition.getSensorId(),
-                toConditionTypeAvro(scenarioCondition.getType()),
-                toConditionOperationAvro(scenarioCondition.getOperation()),
-                scenarioCondition.getValue()
-        );
+    private ScenarioConditionAvro toScenarioConditionAvro(ScenarioCondition scenarioCondition) {
+        ScenarioConditionAvro avro = new ScenarioConditionAvro();
+        avro.setSensorId(scenarioCondition.getSensorId());
+        avro.setType(toConditionTypeAvro(scenarioCondition.getType()));
+        avro.setOperation(toConditionOperationAvro(scenarioCondition.getOperation()));
+
+        Object value = scenarioCondition.getValue();
+        if (value == null) {
+            avro.setValue(null);
+        } else if (value instanceof Boolean) {
+            avro.setValue((Boolean) value);
+        } else if (value instanceof Number) {
+            avro.setValue(((Number) value).intValue());
+        } else {
+            throw new IllegalArgumentException("Invalid value type: " + value.getClass());
+        }
+
+        return avro;
     }
 
-    public static DeviceActionAvro toDeviceActionAvro(DeviceAction deviceAction) {
-        return new DeviceActionAvro(
-                deviceAction.getSensorId(),
-                toActionTypeAvro(deviceAction.getType()),
-                deviceAction.getValue()
-        );
+    private DeviceActionAvro toDeviceActionAvro(DeviceAction deviceAction) {
+        DeviceActionAvro avro = new DeviceActionAvro();
+        avro.setSensorId(deviceAction.getSensorId());
+        avro.setType(toActionTypeAvro(deviceAction.getType()));
+        avro.setValue(deviceAction.getValue());
+        return avro;
     }
 }

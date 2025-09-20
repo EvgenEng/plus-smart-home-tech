@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
+import ru.yandex.practicum.validation.AllowedConditionValue;
 
 @Getter
 @Setter
@@ -18,5 +19,6 @@ public class ScenarioCondition {
 
     ConditionOperation operation;
 
+    @AllowedConditionValue
     Object value;
 }
