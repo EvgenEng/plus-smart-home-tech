@@ -33,7 +33,7 @@ public class HubEventMapper {
     public HubEventAvro toHubEventAvro(HubEvent hubEvent) {
         HubEventAvro avro = new HubEventAvro();
         avro.setHubId(hubEvent.getHubId());
-        avro.setTimestamp(Instant.ofEpochSecond(hubEvent.getTimestamp().toEpochMilli()));
+        avro.setTimestamp(hubEvent.getTimestamp());
         avro.setPayload(toHubEventPayloadAvro(hubEvent));
         return avro;
     }
