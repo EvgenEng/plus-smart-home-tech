@@ -20,11 +20,19 @@ import java.util.stream.Collectors;
 public class GrpcEventController extends CollectorControllerGrpc.CollectorControllerImplBase {
 
     private final Map<SensorEventProto.PayloadCase, SensorEventHandler> sensorEventHandlers;
+    private final Map<HubEventProto.PayloadCase, HubEventHandler> hubEventHandlers;
 
-    public GrpcEventController(Set<SensorEventHandler> sensorEventHandlers) {
+    // ИЗМЕНЕНИЕ: Добавляем Set<HubEventHandler> в конструктор
+    public GrpcEventController(Set<SensorEventHandler> sensorEventHandlers,
+                               Set<HubEventHandler> hubEventHandlers) {
         this.sensorEventHandlers = sensorEventHandlers.stream()
                 .collect(Collectors.toMap(
                         SensorEventHandler::getMessageType,
+                        Function.identity()
+                ));
+        this.hubEventHandlers = hubEventHandlers.stream()
+                .collect(Collectors.toMap(
+                        HubEventHandler::getMessageType,
                         Function.identity()
                 ));
     }
@@ -54,7 +62,14 @@ public class GrpcEventController extends CollectorControllerGrpc.CollectorContro
     @Override
     public void collectHubEvent(HubEventProto request, StreamObserver<Empty> responseObserver) {
         try {
-            log.info("Received hub event from hub: {}", request.getHubId());
+            log.info("Received hub event from hub: {}, type: {}", request.getHubId(), request.getPayloadCase());
+
+            // ИСПРАВЛЕНИЕ: Добавляем обработку Hub событий
+            if (hubEventHandlers.containsKey(request.getPayloadCase())) {
+                hubEventHandlers.get(request.getPayloadCase()).handle(request);
+            } else {
+                throw new IllegalArgumentException("Cannot find handler for hub event type: " + request.getPayloadCase());
+            }
 
             responseObserver.onNext(Empty.getDefaultInstance());
             responseObserver.onCompleted();
