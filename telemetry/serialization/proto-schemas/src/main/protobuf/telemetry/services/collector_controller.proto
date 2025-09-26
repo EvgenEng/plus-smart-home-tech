@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package telemetry.service;
+package telemetry.service.collector;
 
 import "telemetry/messages/sensor_event.proto";
 import "telemetry/messages/hub_event.proto";

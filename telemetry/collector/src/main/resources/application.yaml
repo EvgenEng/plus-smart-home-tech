@@ -1,6 +1,6 @@
 grpc:
   server:
-    port: 9090
+    port: 59091
   client:
     echo:
       address: 'static://127.0.0.1:9090'
