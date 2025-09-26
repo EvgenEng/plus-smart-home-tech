@@ -45,9 +45,9 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.6.1</version>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:windows-x86_64</protocArtifact>
                     <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:windows-x86_64</pluginArtifact>
                     <protoSourceRoot>${project.basedir}/src/main/protobuf</protoSourceRoot>
                 </configuration>
                 <executions>
@@ -74,8 +74,7 @@
                         <configuration>
                             <sources>
                                 <source>${project.build.directory}/generated-sources/protobuf/java</source>
-                                <source>${project.build.directory}/generated-sources/protobuf/grpc-java</source>
-                            </sources>
+                                <source>${project.build.directory}/generated-sources/protobuf/grpc-java</source>                            </sources>
                         </configuration>
                     </execution>
                 </executions>
