@@ -1,0 +1,20 @@
+grpc:
+  server:
+    port: 9090
+  client:
+    echo:
+      address: 'static://127.0.0.1:9090'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+
+spring:
+  application:
+    name: collector
+
+kafka:
+  bootstrap-servers: localhost:9092
+
+logging:
+  level:
+    ru.yandex.practicum: DEBUG
