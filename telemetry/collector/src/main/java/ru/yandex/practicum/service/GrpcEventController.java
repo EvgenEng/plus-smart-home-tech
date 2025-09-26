@@ -97,7 +97,11 @@ public class GrpcEventController extends CollectorControllerGrpc.CollectorContro
                 var scenarioAddedEvent = new ru.yandex.practicum.model.hub.ScenarioAddedEvent();
                 setCommonHubFields(scenarioAddedEvent, proto);
                 scenarioAddedEvent.setName(scenarioAdded.getName());
-                // TODO: добавить конвертацию условий и действий когда понадобится
+
+                // ИНИЦИАЛИЗИРУЕМ СПИСКИ чтобы избежать NullPointerException
+                scenarioAddedEvent.setConditions(new java.util.ArrayList<>());
+                scenarioAddedEvent.setActions(new java.util.ArrayList<>());
+
                 return scenarioAddedEvent;
 
             case SCENARIO_REMOVED:
