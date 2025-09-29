@@ -28,7 +28,7 @@ public class SnapshotProcessor implements Runnable {
     private final SnapshotHandler snapshotHandler;
     private final KafkaConsumerProperties properties;
 
-    @GrpcClient("collector")
+    @GrpcClient("hub-router")
     private final HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
 
     @Override
