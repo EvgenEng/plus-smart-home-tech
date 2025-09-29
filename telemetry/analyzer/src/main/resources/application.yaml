@@ -24,8 +24,8 @@ kafka:
 
 grpc:
   client:
-    hub-router:
-      address: static://localhost:59090
+    collector:
+      address: static://localhost:59091
       enable-keep-alive: true
       keep-alive-without-calls: true
       negotiation-type: plaintext
