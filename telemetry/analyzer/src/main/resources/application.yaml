@@ -23,21 +23,25 @@ analyzer:
   kafka:
     consumer:
       sensor-snapshot:
-        bootstrap.servers: localhost:9092
-        group.id: analyzer-snapshot-group
-        key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value.deserializer: ru.yandex.practicum.SensorSnapshotDeserializer
-        enable.auto.commit: false
-        auto.offset.reset: earliest
-        max.poll.records: 100
+        bootstrap.servers: "localhost:9092"
+        group.id: "analyzer-snapshot-group"
+        key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
+        enable.auto.commit: "false"
+        auto.offset.reset: "earliest"
+        max.poll.records: "100"
+        specific.avro.reader: "true"
+        schema.registry.url: "http://localhost:8081"
       hub-event:
-        bootstrap.servers: localhost:9092
-        group.id: analyzer-hub-group
-        key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value.deserializer: ru.yandex.practicum.HubEventDeserializer
-        enable.auto.commit: false
-        auto.offset.reset: earliest
-        max.poll.records: 50
+        bootstrap.servers: "localhost:9092"
+        group.id: "analyzer-hub-group"
+        key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
+        enable.auto.commit: "false"
+        auto.offset.reset: "earliest"
+        max.poll.records: "50"
+        specific.avro.reader: "true"
+        schema.registry.url: "http://localhost:8081"
       poll-duration-seconds:
         sensor-snapshot: 10
         hub-event: 10
@@ -45,7 +49,7 @@ analyzer:
 grpc:
   client:
     hub-router:
-      address: static://localhost:59090
+      address: "static://localhost:59090"
       enable-keep-alive: true
       keep-alive-without-calls: true
       negotiation-type: plaintext
