@@ -43,12 +43,16 @@ public class HubEventHandlerImpl implements HubEventHandler {
         Object payload = event.getPayload();
         String hubId = event.getHubId();
 
-        switch (payload) {
-            case ScenarioAddedEventAvro eventAvro -> addScenario(eventAvro, hubId);
-            case ScenarioRemovedEventAvro eventAvro -> deleteScenario(eventAvro, hubId);
-            case DeviceAddedEventAvro eventAvro -> addDevice(eventAvro, hubId);
-            case DeviceRemovedEventAvro eventAvro -> deleteDevice(eventAvro, hubId);
-            default -> log.warn("Unknown payload type: {}", payload.getClass().getSimpleName());
+        if (payload instanceof ScenarioAddedEventAvro eventAvro) {
+            addScenario(eventAvro, hubId);
+        } else if (payload instanceof ScenarioRemovedEventAvro eventAvro) {
+            deleteScenario(eventAvro, hubId);
+        } else if (payload instanceof DeviceAddedEventAvro eventAvro) {
+            addDevice(eventAvro, hubId);
+        } else if (payload instanceof DeviceRemovedEventAvro eventAvro) {
+            deleteDevice(eventAvro, hubId);
+        } else {
+            log.warn("Unknown payload type: {}", payload.getClass().getSimpleName());
         }
     }
 
