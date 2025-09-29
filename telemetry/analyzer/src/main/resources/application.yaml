@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: analyzer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/telemetry_analyzer
+    username: analyzer
+    password: analyzer
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+analyzer:
+  kafka:
+    consumer:
+      sensor-snapshot:
+        bootstrap.servers: localhost:9092
+        group.id: analyzer-snapshot-group
+        key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value.deserializer: ru.yandex.practicum.SensorSnapshotDeserializer
+        enable.auto.commit: false
+        auto.offset.reset: earliest
+        max.poll.records: 100
+      hub-event:
+        bootstrap.servers: localhost:9092
+        group.id: analyzer-hub-group
+        key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value.deserializer: ru.yandex.practicum.HubEventDeserializer
+        enable.auto.commit: false
+        auto.offset.reset: earliest
+        max.poll.records: 50
+      poll-duration-seconds:
+        sensor-snapshot: 10
+        hub-event: 10
+
+grpc:
+  client:
+    hub-router:
+      address: static://localhost:59090
+      enable-keep-alive: true
+      keep-alive-without-calls: true
+      negotiation-type: plaintext
+
+logging:
+  level:
+    ru.yandex.practicum: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
