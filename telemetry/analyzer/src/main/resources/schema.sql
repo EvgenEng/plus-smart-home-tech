@@ -27,20 +27,20 @@ CREATE TABLE IF NOT EXISTS actions (
                                        value INTEGER
 );
 
--- Создаем таблицу scenario_conditions, связывающую сценарий, датчик и условие активации сценария
+-- таблица для scenario_conditions
 CREATE TABLE IF NOT EXISTS scenario_conditions (
                                                    scenario_id BIGINT REFERENCES scenarios(id) ON DELETE CASCADE,
-    sensor_id VARCHAR REFERENCES sensors(id) ON DELETE RESTRICT,
-    condition_id BIGINT REFERENCES conditions(id) ON DELETE CASCADE,
-    PRIMARY KEY (scenario_id, sensor_id, condition_id)
+    sensor_id VARCHAR NOT NULL,
+    condition_id BIGINT NOT NULL,
+    PRIMARY KEY (scenario_id, sensor_id)
     );
 
--- Создаем таблицу scenario_actions, связывающую сценарий, датчик и действие, которое нужно выполнить при активации сценария
+-- таблица для scenario_actions
 CREATE TABLE IF NOT EXISTS scenario_actions (
                                                 scenario_id BIGINT REFERENCES scenarios(id) ON DELETE CASCADE,
-    sensor_id VARCHAR REFERENCES sensors(id) ON DELETE RESTRICT,
-    action_id BIGINT REFERENCES actions(id) ON DELETE CASCADE,
-    PRIMARY KEY (scenario_id, sensor_id, action_id)
+    sensor_id VARCHAR NOT NULL,
+    action_id BIGINT NOT NULL,
+    PRIMARY KEY (scenario_id, sensor_id)
     );
 
 -- Создаем индексы для улучшения производительности

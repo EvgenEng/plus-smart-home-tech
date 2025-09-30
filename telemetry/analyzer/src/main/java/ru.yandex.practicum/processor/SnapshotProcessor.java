@@ -2,7 +2,6 @@ package ru.yandex.practicum.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -27,8 +26,6 @@ public class SnapshotProcessor implements Runnable {
     private final KafkaConsumer<String, SensorsSnapshotAvro> snapshotConsumer;
     private final SnapshotHandler snapshotHandler;
     private final KafkaConsumerProperties properties;
-
-    @GrpcClient("hub-router")
     private final HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
 
     @Override
@@ -45,17 +42,22 @@ public class SnapshotProcessor implements Runnable {
 
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
                     try {
-                        log.debug("Processing snapshot for hub: {}", record.key());
+                        log.info("Processing snapshot for hub: {}", record.key());
                         List<DeviceActionRequest> actions = snapshotHandler.handle(record.value());
+
+                        log.info("Generated {} actions for hub: {}", actions.size(), record.key());
 
                         for (DeviceActionRequest action : actions) {
                             try {
-                                hubRouterClient.handleDeviceAction(action);
-                                log.info("Executed action for scenario: {} on hub: {}",
+                                log.info("Sending gRPC action for scenario: {}, sensor: {}",
+                                        action.getScenarioName(), action.getAction().getSensorId());
+
+                                var response = hubRouterClient.handleDeviceAction(action);
+                                log.info("✅ Successfully executed action for scenario: {} on hub: {}",
                                         action.getScenarioName(), action.getHubId());
                             } catch (Exception e) {
-                                log.error("Failed to execute action for scenario: {}: {}",
-                                        action.getScenarioName(), e.getMessage());
+                                log.error("❌ Failed to execute action for scenario: {}: {}",
+                                        action.getScenarioName(), e.getMessage(), e);
                             }
                         }
                     } catch (Exception e) {
