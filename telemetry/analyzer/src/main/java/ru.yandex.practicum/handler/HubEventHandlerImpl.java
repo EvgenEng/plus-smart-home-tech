@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.entity.Action;
 import ru.yandex.practicum.entity.Condition;
 import ru.yandex.practicum.entity.Scenario;
+import ru.yandex.practicum.entity.ScenarioAction;
+import ru.yandex.practicum.entity.ScenarioCondition;
 import ru.yandex.practicum.entity.Sensor;
 import ru.yandex.practicum.exception.DuplicateException;
 import ru.yandex.practicum.exception.NotFoundException;
@@ -23,7 +25,9 @@ import ru.yandex.practicum.repository.ConditionRepository;
 import ru.yandex.practicum.repository.ScenarioRepository;
 import ru.yandex.practicum.repository.SensorRepository;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -71,46 +75,59 @@ public class HubEventHandlerImpl implements HubEventHandler {
 
         checkSensorIds(eventAvro, hubId);
 
-        Map<String, Condition> conditions = eventAvro.getConditions().stream()
-                .collect(Collectors.toMap(
-                        ScenarioConditionAvro::getSensorId,
-                        condition -> Condition.builder()
-                                .type(mapper.toConditionType(condition.getType()))
-                                .operation(mapper.toConditionOperation(condition.getOperation()))
-                                .value(extractValue(condition))
-                                .build()
-                ));
-
-        Map<String, Action> actions = eventAvro.getActions().stream()
-                .collect(Collectors.toMap(
-                        DeviceActionAvro::getSensorId,
-                        action -> Action.builder()
-                                .type(mapper.toActionType(action.getType()))
-                                .value(action.getValue())
-                                .build()
-                ));
-
-        conditionRepository.saveAll(conditions.values());
-        actionRepository.saveAll(actions.values());
-
-        Map<String, Long> conditionIds = conditions.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getId()));
-
-        Map<String, Long> actionIds = actions.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getId()));
-
         Scenario scenario = Scenario.builder()
                 .hubId(hubId)
                 .name(name)
-                .conditionIds(conditionIds)
-                .actionIds(actionIds)
+                .conditions(new ArrayList<>())
+                .actions(new ArrayList<>())
                 .build();
 
-        scenarioRepository.save(scenario);
+        for (ScenarioConditionAvro conditionAvro : eventAvro.getConditions()) {
+            Condition condition = Condition.builder()
+                    .type(mapper.toConditionType(conditionAvro.getType()))
+                    .operation(mapper.toConditionOperation(conditionAvro.getOperation()))
+                    .value(extractValue(conditionAvro))
+                    .build();
+
+            condition = conditionRepository.save(condition);
+
+            Sensor sensor = sensorRepository.findById(conditionAvro.getSensorId())
+                    .orElseThrow(() -> new NotFoundException("Sensor not found: " + conditionAvro.getSensorId()));
+
+            ScenarioCondition scenarioCondition = ScenarioCondition.builder()
+                    .scenario(scenario)
+                    .sensor(sensor)
+                    .condition(condition)
+                    .build();
+
+            scenario.addCondition(scenarioCondition);
+        }
+
+        for (DeviceActionAvro actionAvro : eventAvro.getActions()) {
+            Action action = Action.builder()
+                    .type(mapper.toActionType(actionAvro.getType()))
+                    .value(actionAvro.getValue())
+                    .build();
+
+            action = actionRepository.save(action);
+
+            Sensor sensor = sensorRepository.findById(actionAvro.getSensorId())
+                    .orElseThrow(() -> new NotFoundException("Sensor not found: " + actionAvro.getSensorId()));
+
+            ScenarioAction scenarioAction = ScenarioAction.builder()
+                    .scenario(scenario)
+                    .sensor(sensor)
+                    .action(action)
+                    .build();
+
+            scenario.addAction(scenarioAction);
+        }
+
+        scenario = scenarioRepository.save(scenario);
 
         log.info("✅ Scenario added successfully: {} for hub: {}", name, hubId);
-        log.info("Conditions: {}", conditionIds);
-        log.info("Actions: {}", actionIds);
+        log.info("Conditions count: {}", scenario.getConditions().size());
+        log.info("Actions count: {}", scenario.getActions().size());
     }
 
     private void deleteScenario(ScenarioRemovedEventAvro eventAvro, String hubId) {
@@ -118,8 +135,16 @@ public class HubEventHandlerImpl implements HubEventHandler {
         Scenario scenario = scenarioRepository.findByHubIdAndName(hubId, name)
                 .orElseThrow(() -> new NotFoundException("Scenario not found: " + name));
 
-        conditionRepository.deleteAllById(scenario.getConditionIds().values());
-        actionRepository.deleteAllById(scenario.getActionIds().values());
+        List<Long> conditionIds = scenario.getConditions().stream()
+                .map(sc -> sc.getCondition().getId())
+                .collect(Collectors.toList());
+
+        List<Long> actionIds = scenario.getActions().stream()
+                .map(sa -> sa.getAction().getId())
+                .collect(Collectors.toList());
+
+        conditionRepository.deleteAllById(conditionIds);
+        actionRepository.deleteAllById(actionIds);
         scenarioRepository.delete(scenario);
 
         log.info("Scenario deleted: {} for hub: {}", name, hubId);
@@ -155,19 +180,19 @@ public class HubEventHandlerImpl implements HubEventHandler {
     }
 
     private void checkSensorIds(ScenarioAddedEventAvro eventAvro, String hubId) {
-        var conditionSensorIds = eventAvro.getConditions().stream()
+        Set<String> conditionSensorIds = eventAvro.getConditions().stream()
                 .map(ScenarioConditionAvro::getSensorId)
                 .collect(Collectors.toSet());
 
-        var actionSensorIds = eventAvro.getActions().stream()
+        Set<String> actionSensorIds = eventAvro.getActions().stream()
                 .map(DeviceActionAvro::getSensorId)
                 .collect(Collectors.toSet());
 
         log.info("Condition sensors: {}", conditionSensorIds);
         log.info("Action sensors: {}", actionSensorIds);
 
-        var existingConditionSensors = sensorRepository.findByIdInAndHubId(conditionSensorIds, hubId);
-        var existingActionSensors = sensorRepository.findByIdInAndHubId(actionSensorIds, hubId);
+        List<Sensor> existingConditionSensors = sensorRepository.findByIdInAndHubId(conditionSensorIds, hubId);
+        List<Sensor> existingActionSensors = sensorRepository.findByIdInAndHubId(actionSensorIds, hubId);
 
         log.info("Existing condition sensors: {}", existingConditionSensors.stream().map(Sensor::getId).collect(Collectors.toList()));
         log.info("Existing action sensors: {}", existingActionSensors.stream().map(Sensor::getId).collect(Collectors.toList()));

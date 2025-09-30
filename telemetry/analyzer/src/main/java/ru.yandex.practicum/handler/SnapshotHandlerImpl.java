@@ -7,9 +7,17 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.entity.Action;
 import ru.yandex.practicum.entity.Condition;
 import ru.yandex.practicum.entity.Scenario;
+import ru.yandex.practicum.entity.ScenarioAction;
+import ru.yandex.practicum.entity.ScenarioCondition;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionRequest;
-import ru.yandex.practicum.kafka.telemetry.event.*;
+import ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro;
+import ru.yandex.practicum.kafka.telemetry.event.LightSensorAvro;
+import ru.yandex.practicum.kafka.telemetry.event.MotionSensorAvro;
+import ru.yandex.practicum.kafka.telemetry.event.SensorStateAvro;
+import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
+import ru.yandex.practicum.kafka.telemetry.event.SwitchSensorAvro;
+import ru.yandex.practicum.kafka.telemetry.event.TemperatureSensorAvro;
 import ru.yandex.practicum.mapper.Mapper;
 import ru.yandex.practicum.model.enums.ConditionOperation;
 import ru.yandex.practicum.repository.ActionRepository;
@@ -53,11 +61,12 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
         snapshots.put(hubId, snapshot);
         List<DeviceActionRequest> actionRequests = new ArrayList<>();
 
-        List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
+        List<Scenario> scenarios = scenarioRepository.findByHubIdWithDetails(hubId);
         log.info("Found {} scenarios for hub: {}", scenarios.size(), hubId);
 
         for (Scenario scenario : scenarios) {
-            log.info("Checking scenario: {} with conditions: {}", scenario.getName(), scenario.getConditionIds().keySet());
+            log.info("Checking scenario: {} with {} conditions and {} actions",
+                    scenario.getName(), scenario.getConditions().size(), scenario.getActions().size());
 
             boolean conditionsMet = checkScenarioConditions(scenario, snapshot);
             log.info("Scenario '{}' conditions met: {}", scenario.getName(), conditionsMet);
@@ -76,24 +85,35 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
     private boolean checkScenarioConditions(Scenario scenario, SensorsSnapshotAvro snapshot) {
         Map<String, SensorStateAvro> sensorStates = snapshot.getSensorsState();
 
-        if (!sensorStates.keySet().containsAll(scenario.getConditionIds().keySet())) {
-            log.warn("Missing sensors for scenario '{}'", scenario.getName());
-            return false;
-        }
+        log.info("=== CHECKING SCENARIO: {} ===", scenario.getName());
 
-        for (Map.Entry<String, Long> entry : scenario.getConditionIds().entrySet()) {
-            String sensorId = entry.getKey();
-            Long conditionId = entry.getValue();
-
-            Condition condition = conditionRepository.findById(conditionId)
-                    .orElseThrow(() -> new RuntimeException("Condition not found: " + conditionId));
-
-            SensorStateAvro sensorState = sensorStates.get(sensorId);
-            if (!checkCondition(condition, sensorState)) {
+        for (ScenarioCondition scenarioCondition : scenario.getConditions()) {
+            String sensorId = scenarioCondition.getSensor().getId();
+            if (!sensorStates.containsKey(sensorId)) {
+                log.warn("Sensor {} not found in snapshot for scenario '{}'", sensorId, scenario.getName());
                 return false;
             }
         }
 
+        for (ScenarioCondition scenarioCondition : scenario.getConditions()) {
+            String sensorId = scenarioCondition.getSensor().getId();
+            Condition condition = scenarioCondition.getCondition();
+
+            log.info("Checking condition for sensor: {}", sensorId);
+
+            SensorStateAvro sensorState = sensorStates.get(sensorId);
+            boolean conditionResult = checkCondition(condition, sensorState);
+
+            log.info("Condition {} {} {} = {}",
+                    condition.getType(), condition.getOperation(), condition.getValue(), conditionResult);
+
+            if (!conditionResult) {
+                log.info("❌ Condition NOT met for sensor: {}", sensorId);
+                return false;
+            }
+        }
+
+        log.info("✅ ALL conditions met for scenario: {}", scenario.getName());
         return true;
     }
 
@@ -145,12 +165,9 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
     private List<DeviceActionRequest> createActionRequests(Scenario scenario, SensorsSnapshotAvro snapshot) {
         List<DeviceActionRequest> requests = new ArrayList<>();
 
-        for (Map.Entry<String, Long> entry : scenario.getActionIds().entrySet()) {
-            String sensorId = entry.getKey();
-            Long actionId = entry.getValue();
-
-            Action action = actionRepository.findById(actionId)
-                    .orElseThrow(() -> new RuntimeException("Action not found: " + actionId));
+        for (ScenarioAction scenarioAction : scenario.getActions()) {
+            String sensorId = scenarioAction.getSensor().getId();
+            Action action = scenarioAction.getAction();
 
             DeviceActionRequest request = DeviceActionRequest.newBuilder()
                     .setHubId(scenario.getHubId())
@@ -167,6 +184,8 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
                     .build();
 
             requests.add(request);
+            log.info("Created action for sensor: {}, type: {}, value: {}",
+                    sensorId, action.getType(), action.getValue());
         }
 
         return requests;
