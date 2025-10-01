@@ -33,9 +33,10 @@ analyzer:
 
 spring:
   jpa:
-    hibernate.ddl-auto: none
+    hibernate.ddl-auto: create
     properties.hibernate.format_sql: true
-  sql.init.mode: always
+    properties.hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql.init.mode: never
   datasource:
     driverClassName: "org.postgresql.Driver"
     url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
