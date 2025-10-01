@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.config.KafkaConsumerProperties;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionRequest;
 import ru.yandex.practicum.grpc.telemetry.hubrouter.HubRouterControllerGrpc;
-import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 import ru.yandex.practicum.handler.SnapshotHandler;
+import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -71,7 +71,6 @@ public class SnapshotProcessor implements Runnable {
             try {
                 consumer.commitSync(currentOffset);
             } finally {
-                log.info("Закрываем консьюмер");
                 consumer.close();
             }
         }

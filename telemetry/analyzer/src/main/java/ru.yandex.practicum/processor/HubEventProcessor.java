@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.config.KafkaConsumerProperties;
 import ru.yandex.practicum.exception.DuplicateException;
 import ru.yandex.practicum.exception.NotFoundException;
-import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 import ru.yandex.practicum.handler.HubEventHandler;
+import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -43,7 +43,7 @@ public class HubEventProcessor implements Runnable {
                     try {
                         hubEventHandler.handle(record.value());
                     } catch (DuplicateException | NotFoundException e) {
-                        log.info("Произошло исключение");
+                        log.info("При обработке получено исключение: {} {}", e.getClass().getSimpleName(), e.getMessage());
                     }
                     currentOffset.put(
                             new TopicPartition(record.topic(), record.partition()),
@@ -63,7 +63,6 @@ public class HubEventProcessor implements Runnable {
             try {
                 consumer.commitSync(currentOffset);
             } finally {
-                log.info("Закрываем консьюмер");
                 consumer.close();
             }
         }
