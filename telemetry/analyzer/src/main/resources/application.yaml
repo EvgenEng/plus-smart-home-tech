@@ -1,36 +1,47 @@
-spring:
-  application:
-    name: analyzer
-  datasource:
-    url: jdbc:postgresql://localhost:5432/telemetry_analyzer
-    username: analyzer
-    password: analyzer
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-
-kafka:
-  bootstrap-servers: localhost:9092
+analyzer:
+  kafka:
+    consumer:
+      sensor_snapshot:
+        bootstrap.servers: "localhost:9092"
+        key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
+        group.id: "analyzer-consumer"
+        enable.auto.commit: false
+        specific.avro.reader: "true"
+        schema.registry.url: "http://localhost:8081"
+        auto.offset.reset: "earliest"
+      hub_event:
+        bootstrap.servers: "localhost:9092"
+        key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
+        group.id: "analyzer-consumer"
+        enable.auto.commit: false
+        specific.avro.reader: "true"
+        schema.registry.url: "http://localhost:8081"
+        auto.offset.reset: "earliest"
+      poll_duration_seconds:
+        sensor_snapshot: 10
+        hub_event: 10
 
 grpc:
   client:
     hub-router:
-      address: static://localhost:59090
-      negotiation-type: plaintext
-      enable-keep-alive: true
-      keep-alive-without-calls: true
+      address: "static://localhost:59090"
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+
+spring:
+  jpa:
+    hibernate.ddl-auto: validate
+    properties.hibernate.format_sql: true
+  sql.init.mode: always
+  datasource:
+    driverClassName: "org.postgresql.Driver"
+    url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
+    username: "analyzer"
+    password: "analyzer"
 
 logging:
   level:
     ru.yandex.practicum: DEBUG
-    org.hibernate.SQL: DEBUG

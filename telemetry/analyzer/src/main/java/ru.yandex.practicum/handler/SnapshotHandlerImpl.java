@@ -11,13 +11,8 @@ import ru.yandex.practicum.entity.ScenarioAction;
 import ru.yandex.practicum.entity.ScenarioCondition;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionRequest;
-import ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro;
-import ru.yandex.practicum.kafka.telemetry.event.LightSensorAvro;
-import ru.yandex.practicum.kafka.telemetry.event.MotionSensorAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SensorStateAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
-import ru.yandex.practicum.kafka.telemetry.event.SwitchSensorAvro;
-import ru.yandex.practicum.kafka.telemetry.event.TemperatureSensorAvro;
 import ru.yandex.practicum.mapper.Mapper;
 import ru.yandex.practicum.model.enums.ConditionOperation;
 import ru.yandex.practicum.repository.ActionRepository;
@@ -37,8 +32,6 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
 
     private final Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
     private final ScenarioRepository scenarioRepository;
-    private final ConditionRepository conditionRepository;
-    private final ActionRepository actionRepository;
     private final Mapper mapper;
 
     @Override
@@ -69,6 +62,7 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
                     scenario.getName(), scenario.getConditions().size(), scenario.getActions().size());
 
             boolean conditionsMet = checkScenarioConditions(scenario, snapshot);
+
             log.info("Scenario '{}' conditions met: {}", scenario.getName(), conditionsMet);
 
             if (conditionsMet) {
@@ -85,8 +79,6 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
     private boolean checkScenarioConditions(Scenario scenario, SensorsSnapshotAvro snapshot) {
         Map<String, SensorStateAvro> sensorStates = snapshot.getSensorsState();
 
-        log.info("=== CHECKING SCENARIO: {} ===", scenario.getName());
-
         for (ScenarioCondition scenarioCondition : scenario.getConditions()) {
             String sensorId = scenarioCondition.getSensor().getId();
             if (!sensorStates.containsKey(sensorId)) {
@@ -99,21 +91,14 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
             String sensorId = scenarioCondition.getSensor().getId();
             Condition condition = scenarioCondition.getCondition();
 
-            log.info("Checking condition for sensor: {}", sensorId);
-
             SensorStateAvro sensorState = sensorStates.get(sensorId);
             boolean conditionResult = checkCondition(condition, sensorState);
 
-            log.info("Condition {} {} {} = {}",
-                    condition.getType(), condition.getOperation(), condition.getValue(), conditionResult);
-
             if (!conditionResult) {
-                log.info("❌ Condition NOT met for sensor: {}", sensorId);
                 return false;
             }
         }
 
-        log.info("✅ ALL conditions met for scenario: {}", scenario.getName());
         return true;
     }
 
@@ -124,31 +109,32 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
 
         return switch (condition.getType()) {
             case TEMPERATURE -> {
-                if (data instanceof TemperatureSensorAvro temperatureState) {
+                if (data instanceof ru.yandex.practicum.kafka.telemetry.event.TemperatureSensorAvro temperatureState) {
                     yield checkByConditionOperation(temperatureState.getTemperatureC(), value, operation);
-                } else if (data instanceof ClimateSensorAvro climateState) {
+                }
+                if (data instanceof ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro climateState) {
                     yield checkByConditionOperation(climateState.getTemperatureC(), value, operation);
                 }
                 throw new IllegalArgumentException("Unsupported sensor type for temperature");
             }
             case LUMINOSITY -> {
-                LightSensorAvro lightSensorState = (LightSensorAvro) data;
+                ru.yandex.practicum.kafka.telemetry.event.LightSensorAvro lightSensorState = (ru.yandex.practicum.kafka.telemetry.event.LightSensorAvro) data;
                 yield checkByConditionOperation(lightSensorState.getLuminosity(), value, operation);
             }
             case HUMIDITY -> {
-                ClimateSensorAvro climateSensorState = (ClimateSensorAvro) data;
+                ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro climateSensorState = (ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro) data;
                 yield checkByConditionOperation(climateSensorState.getHumidity(), value, operation);
             }
             case CO2LEVEL -> {
-                ClimateSensorAvro climateSensorState = (ClimateSensorAvro) data;
+                ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro climateSensorState = (ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro) data;
                 yield checkByConditionOperation(climateSensorState.getCo2Level(), value, operation);
             }
             case SWITCH -> {
-                SwitchSensorAvro switchSensorState = (SwitchSensorAvro) data;
+                ru.yandex.practicum.kafka.telemetry.event.SwitchSensorAvro switchSensorState = (ru.yandex.practicum.kafka.telemetry.event.SwitchSensorAvro) data;
                 yield (switchSensorState.getState() ? 1 : 0) == value;
             }
             case MOTION -> {
-                MotionSensorAvro motionSensorState = (MotionSensorAvro) data;
+                ru.yandex.practicum.kafka.telemetry.event.MotionSensorAvro motionSensorState = (ru.yandex.practicum.kafka.telemetry.event.MotionSensorAvro) data;
                 yield (motionSensorState.getMotion() ? 1 : 0) == value;
             }
         };
@@ -184,8 +170,7 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
                     .build();
 
             requests.add(request);
-            log.info("Created action for sensor: {}, type: {}, value: {}",
-                    sensorId, action.getType(), action.getValue());
+            log.info("Created action for sensor: {}, type: {}, value: {}", sensorId, action.getType(), action.getValue());
         }
 
         return requests;
