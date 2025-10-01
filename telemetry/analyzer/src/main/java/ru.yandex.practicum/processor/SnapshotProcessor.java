@@ -2,6 +2,7 @@ package ru.yandex.practicum.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -26,8 +27,13 @@ public class SnapshotProcessor implements Runnable {
     private final KafkaConsumer<String, SensorsSnapshotAvro> snapshotConsumer;
     private final SnapshotHandler snapshotHandler;
     private final KafkaConsumerProperties properties;
-    private final HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
+    private HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
 
+    @GrpcClient("hub-router")
+    public void setHubRouterClient(HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient) {
+        this.hubRouterClient = hubRouterClient;
+    }
+    
     @Override
     public void run() {
         try {
@@ -38,7 +44,8 @@ public class SnapshotProcessor implements Runnable {
 
             while (true) {
                 ConsumerRecords<String, SensorsSnapshotAvro> records =
-                        snapshotConsumer.poll(Duration.ofSeconds(properties.getPollDurationSeconds().getSensorSnapshot()));
+                        snapshotConsumer.poll(Duration.ofSeconds(
+                                properties.getPollDurationSeconds().getSensorSnapshot()));
 
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
                     try {
@@ -57,7 +64,7 @@ public class SnapshotProcessor implements Runnable {
                                         action.getScenarioName(), action.getHubId());
                             } catch (Exception e) {
                                 log.error("❌ Failed to execute action for scenario: {}: {}",
-                                        action.getScenarioName(), e.getMessage(), e);
+                                        action.getScenarioName(), e.getMessage());
                             }
                         }
                     } catch (Exception e) {

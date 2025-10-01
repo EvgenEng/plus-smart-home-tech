@@ -23,5 +23,7 @@ public class AnalyzerApp {
         Thread snapshotThread = new Thread(snapshotProcessor);
         snapshotThread.setName("SnapshotProcessorThread");
         snapshotThread.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(context::close));
     }
 }
