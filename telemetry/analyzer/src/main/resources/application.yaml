@@ -23,17 +23,17 @@ analyzer:
         sensor_snapshot: 10
         hub_event: 10
 
-grpc:
-  client:
-    hub-router:
-      address: "static://localhost:59090"
-      enableKeepAlive: true
-      keepAliveWithoutCalls: true
-      negotiationType: plaintext
+#grpc:
+#  client:
+#    hub-router:
+#      address: 'static://localhost:59090'
+#      enableKeepAlive: true
+#      keepAliveWithoutCalls: true
+#      negotiationType: plaintext
 
 spring:
   jpa:
-    hibernate.ddl-auto: validate
+    hibernate.ddl-auto: none
     properties.hibernate.format_sql: true
   sql.init.mode: always
   datasource:
@@ -41,7 +41,3 @@ spring:
     url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
     username: "analyzer"
     password: "analyzer"
-
-logging:
-  level:
-    ru.yandex.practicum: DEBUG

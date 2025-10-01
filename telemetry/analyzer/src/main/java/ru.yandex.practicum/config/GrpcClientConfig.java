@@ -1,4 +1,4 @@
-/*package ru.yandex.practicum.config;
+package ru.yandex.practicum.config;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -19,4 +19,3 @@ public class GrpcClientConfig {
         return HubRouterControllerGrpc.newBlockingStub(channel);
     }
 }
-*/

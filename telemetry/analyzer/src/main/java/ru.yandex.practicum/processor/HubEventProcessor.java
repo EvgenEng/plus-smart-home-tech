@@ -2,63 +2,70 @@ package ru.yandex.practicum.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import ru.yandex.practicum.config.KafkaConsumerProperties;
 import ru.yandex.practicum.exception.DuplicateException;
 import ru.yandex.practicum.exception.NotFoundException;
-import ru.yandex.practicum.handler.HubEventHandler;
 import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
+import ru.yandex.practicum.handler.HubEventHandler;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+@Service
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class HubEventProcessor implements Runnable {
+    private final String TELEMETRY_HUBS_TOPIC = "telemetry.hubs.v1";
 
-    private static final String TELEMETRY_HUBS_TOPIC = "telemetry.hubs.v1";
-
-    private final KafkaConsumer<String, HubEventAvro> hubEventConsumer;
+    private final Consumer<String, HubEventAvro> consumer;
+    private final Map<TopicPartition, OffsetAndMetadata> currentOffset = new HashMap<>();
     private final HubEventHandler hubEventHandler;
     private final KafkaConsumerProperties properties;
 
     @Override
     public void run() {
         try {
-            hubEventConsumer.subscribe(List.of(TELEMETRY_HUBS_TOPIC));
-            Runtime.getRuntime().addShutdownHook(new Thread(hubEventConsumer::wakeup));
-
-            log.info("HubEventProcessor started for topic: {}", TELEMETRY_HUBS_TOPIC);
-
+            consumer.subscribe(List.of(TELEMETRY_HUBS_TOPIC));
+            Runtime.getRuntime().addShutdownHook(new Thread(consumer::wakeup));
             while (true) {
                 ConsumerRecords<String, HubEventAvro> records =
-                        hubEventConsumer.poll(Duration.ofSeconds(properties.getPollDurationSeconds().getHubEvent()));
-
+                        consumer.poll(Duration.ofSeconds(properties.getPollDurationSeconds().getHubEvent()));
                 for (ConsumerRecord<String, HubEventAvro> record : records) {
                     try {
-                        log.debug("Processing hub event for hub: {}", record.key());
                         hubEventHandler.handle(record.value());
                     } catch (DuplicateException | NotFoundException e) {
-                        log.warn("Skipping hub event due to: {}", e.getMessage());
-                    } catch (Exception e) {
-                        log.error("Error processing hub event: {}", e.getMessage(), e);
+                        log.info("Произошло исключение");
                     }
+                    currentOffset.put(
+                            new TopicPartition(record.topic(), record.partition()),
+                            new OffsetAndMetadata(record.offset() + 1)
+                    );
                 }
-
-                hubEventConsumer.commitAsync();
+                consumer.commitAsync((offsets, exception) -> {
+                    if (exception != null) {
+                        log.warn("Во время фиксации произошла ошибка. Офсет: {}", offsets, exception);
+                    }
+                });
             }
-        } catch (WakeupException e) {
-            log.info("HubEventProcessor shutdown initiated");
+        } catch (WakeupException ignored) {
         } catch (Exception e) {
-            log.error("Error in HubEventProcessor: {}", e.getMessage(), e);
+            log.error("Ошибка во время обработки событий от хабов", e);
         } finally {
-            hubEventConsumer.close();
-            log.info("HubEventProcessor stopped");
+            try {
+                consumer.commitSync(currentOffset);
+            } finally {
+                log.info("Закрываем консьюмер");
+                consumer.close();
+            }
         }
     }
 }

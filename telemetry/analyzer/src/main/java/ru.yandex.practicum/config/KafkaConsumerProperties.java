@@ -16,9 +16,7 @@ public class KafkaConsumerProperties {
     private Properties hubEvent;
     private PollDuration pollDurationSeconds;
 
-    @ToString
-    @Getter
-    @Setter
+    @ToString @Getter @Setter
     public static class PollDuration {
         private Long sensorSnapshot;
         private Long hubEvent;
