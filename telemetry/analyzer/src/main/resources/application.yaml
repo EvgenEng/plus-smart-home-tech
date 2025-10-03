@@ -2,23 +2,19 @@ analyzer:
   kafka:
     consumer:
       sensor_snapshot:
-        bootstrap.servers: "kafka:9092"  # Изменено: имя сервиса из docker-compose
+        bootstrap.servers: "localhost:9092"
         key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
-        value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
-        group.id: "analyzer-snapshot-consumer"  # Изменено: отдельный group.id
+        value.deserializer: "ru.yandex.practicum.SensorSnapshotDeserializer"
+        group.id: "analyzer-snapshot-consumer"
         enable.auto.commit: false
-        specific.avro.reader: "true"
-        schema.registry.url: "http://kafka:8081"  # Изменено: имя сервиса
-        auto.offset.reset: "earliest"
+        retry.backoff.ms: 1000
       hub_event:
-        bootstrap.servers: "kafka:9092"  # Изменено
+        bootstrap.servers: "localhost:9092"
         key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
-        value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
-        group.id: "analyzer-hub-consumer"  # Изменено: отдельный group.id
+        value.deserializer: "ru.yandex.practicum.HubEventDeserializer"
+        group.id: "analyzer-hub-consumer"
         enable.auto.commit: false
-        specific.avro.reader: "true"
-        schema.registry.url: "http://kafka:8081"  # Изменено
-        auto.offset.reset: "earliest"
+        retry.backoff.ms: 1000
       poll_duration_seconds:
         sensor_snapshot: 10
         hub_event: 10
@@ -26,7 +22,7 @@ analyzer:
 grpc:
   client:
     hub-router:
-      address: 'static://hub-router:59090'  # Изменено: имя сервиса в CI
+      address: 'static://localhost:59090'
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext
@@ -39,7 +35,7 @@ spring:
   sql.init.mode: never
   datasource:
     driverClassName: "org.postgresql.Driver"
-    url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"  # Изменено: имя сервиса
+    url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"
     username: "analyzer"
     password: "analyzer"
 
@@ -49,3 +45,4 @@ logging:
     org.springframework: INFO
     io.grpc: DEBUG
     org.hibernate.SQL: DEBUG
+    org.apache.kafka: DEBUG
