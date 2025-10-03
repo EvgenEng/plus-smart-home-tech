@@ -23,13 +23,13 @@ analyzer:
         sensor_snapshot: 10
         hub_event: 10
 
-#grpc:
-#  client:
-#    hub-router:
-#      address: 'static://localhost:59090'
-#      enableKeepAlive: true
-#      keepAliveWithoutCalls: true
-#      negotiationType: plaintext
+grpc:
+  client:
+    hub-router:
+      address: 'static://localhost:59090'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
 
 spring:
   jpa:

@@ -49,10 +49,29 @@ public class SnapshotProcessor implements Runnable {
             while (true) {
                 ConsumerRecords<String, SensorsSnapshotAvro> records =
                         consumer.poll(Duration.ofSeconds(properties.getPollDurationSeconds().getSensorSnapshot()));
+
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
-                    for (DeviceActionRequest action : snapshotHandler.handle(record.value())) {
-                        hubRouterClient.handleDeviceAction(action);
+                    log.info("📥 Received snapshot for hub: {}", record.value().getHubId());
+
+                    List<DeviceActionRequest> actions = snapshotHandler.handle(record.value());
+                    log.info("🔄 Found {} potential actions for hub: {}", actions.size(), record.value().getHubId());
+
+                    for (DeviceActionRequest action : actions) {
+                        try {
+                            log.info("🚀 Sending command to Hub Router - Hub: {}, Scenario: {}, Sensor: {}, Action: {}",
+                                    action.getHubId(),
+                                    action.getScenarioName(),
+                                    action.getAction().getSensorId(),
+                                    action.getAction().getType());
+
+                            hubRouterClient.handleDeviceAction(action);
+                            log.info("✅ Command sent successfully to Hub Router");
+
+                        } catch (Exception e) {
+                            log.error("❌ Failed to send command to Hub Router: {}", e.getMessage(), e);
+                        }
                     }
+
                     currentOffset.put(
                             new TopicPartition(record.topic(), record.partition()),
                             new OffsetAndMetadata(record.offset() + 1)

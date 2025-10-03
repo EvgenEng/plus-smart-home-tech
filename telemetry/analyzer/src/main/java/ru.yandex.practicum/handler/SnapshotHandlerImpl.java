@@ -40,9 +40,12 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
         String hubId = snapshot.getHubId();
         Instant snapshotTimestamp = snapshot.getTimestamp();
 
+        log.info("🔍 Processing snapshot for hub: {} at {}", hubId, snapshotTimestamp);
+
         if (snapshots.containsKey(hubId)) {
             SensorsSnapshotAvro previousSnapshot = snapshots.get(hubId);
             if (previousSnapshot.getTimestamp().isAfter(snapshotTimestamp)) {
+                log.info("⏩ Skipping outdated snapshot for hub: {}", hubId);
                 return List.of();
             }
         }
@@ -51,16 +54,23 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
         List<DeviceActionRequest> actionRequests = new ArrayList<>();
 
         List<Scenario> scenarios = scenarioRepository.findByHubIdWithDetails(hubId);
+        log.info("📋 Found {} scenarios for hub: {}", scenarios.size(), hubId);
 
         for (Scenario scenario : scenarios) {
+            log.info("🔎 Checking scenario: '{}' for hub: {}", scenario.getName(), hubId);
             boolean conditionsMet = checkScenarioConditions(scenario, snapshot);
 
             if (conditionsMet) {
+                log.info("🎯 Scenario '{}' TRIGGERED for hub: {}", scenario.getName(), hubId);
                 List<DeviceActionRequest> actions = createActionRequests(scenario, snapshot);
                 actionRequests.addAll(actions);
+                log.info("📤 Created {} actions for scenario: '{}'", actions.size(), scenario.getName());
+            } else {
+                log.info("❌ Scenario '{}' NOT triggered for hub: {}", scenario.getName(), hubId);
             }
         }
 
+        log.info("📊 Total actions to send: {} for hub: {}", actionRequests.size(), hubId);
         return actionRequests;
     }
 
@@ -70,6 +80,7 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
         for (ScenarioCondition scenarioCondition : scenario.getConditions()) {
             String sensorId = scenarioCondition.getSensor().getId();
             if (!sensorStates.containsKey(sensorId)) {
+                log.debug("❌ Sensor {} not found in snapshot for scenario '{}'", sensorId, scenario.getName());
                 return false;
             }
         }
@@ -82,6 +93,7 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
             boolean conditionResult = checkCondition(condition, sensorState);
 
             if (!conditionResult) {
+                log.debug("❌ Condition not met for sensor {} in scenario '{}'", sensorId, scenario.getName());
                 return false;
             }
         }
