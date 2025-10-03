@@ -2,22 +2,22 @@ analyzer:
   kafka:
     consumer:
       sensor_snapshot:
-        bootstrap.servers: "localhost:9092"
+        bootstrap.servers: "kafka:9092"  # Изменено: имя сервиса из docker-compose
         key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
         value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
-        group.id: "analyzer-consumer"
+        group.id: "analyzer-snapshot-consumer"  # Изменено: отдельный group.id
         enable.auto.commit: false
         specific.avro.reader: "true"
-        schema.registry.url: "http://localhost:8081"
+        schema.registry.url: "http://kafka:8081"  # Изменено: имя сервиса
         auto.offset.reset: "earliest"
       hub_event:
-        bootstrap.servers: "localhost:9092"
+        bootstrap.servers: "kafka:9092"  # Изменено
         key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
         value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
-        group.id: "analyzer-consumer"
+        group.id: "analyzer-hub-consumer"  # Изменено: отдельный group.id
         enable.auto.commit: false
         specific.avro.reader: "true"
-        schema.registry.url: "http://localhost:8081"
+        schema.registry.url: "http://kafka:8081"  # Изменено
         auto.offset.reset: "earliest"
       poll_duration_seconds:
         sensor_snapshot: 10
@@ -26,7 +26,7 @@ analyzer:
 grpc:
   client:
     hub-router:
-      address: 'static://localhost:59090'
+      address: 'static://hub-router:59090'  # Изменено: имя сервиса в CI
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext
@@ -39,6 +39,13 @@ spring:
   sql.init.mode: never
   datasource:
     driverClassName: "org.postgresql.Driver"
-    url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
+    url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"  # Изменено: имя сервиса
     username: "analyzer"
     password: "analyzer"
+
+logging:
+  level:
+    ru.yandex.practicum: DEBUG
+    org.springframework: INFO
+    io.grpc: DEBUG
+    org.hibernate.SQL: DEBUG

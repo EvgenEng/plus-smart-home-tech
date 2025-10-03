@@ -1,5 +1,6 @@
 package ru.yandex.practicum.processor;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -20,26 +21,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
 @Slf4j
+@Service
+@RequiredArgsConstructor
 public class SnapshotProcessor implements Runnable {
     private final String TELEMETRY_SNAPSHOT_TOPIC = "telemetry.snapshots.v1";
 
     private final Consumer<String, SensorsSnapshotAvro> consumer;
-    private final HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient;
     private final Map<TopicPartition, OffsetAndMetadata> currentOffset = new HashMap<>();
     private final SnapshotHandler snapshotHandler;
     private final KafkaConsumerProperties properties;
 
-    public SnapshotProcessor(Consumer<String, SensorsSnapshotAvro> consumer,
-                             HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterClient,
-                             SnapshotHandler snapshotHandler,
-                             KafkaConsumerProperties properties) {
-        this.consumer = consumer;
-        this.hubRouterClient = hubRouterClient;
-        this.snapshotHandler = snapshotHandler;
-        this.properties = properties;
-    }
+    @GrpcClient("hub-router")
+    private HubRouterControllerGrpc.HubRouterControllerBlockingStub hubRouterStub;
 
     @Override
     public void run() {
@@ -49,28 +43,21 @@ public class SnapshotProcessor implements Runnable {
             while (true) {
                 ConsumerRecords<String, SensorsSnapshotAvro> records =
                         consumer.poll(Duration.ofSeconds(properties.getPollDurationSeconds().getSensorSnapshot()));
-
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
-                    log.info("📥 Received snapshot for hub: {}", record.value().getHubId());
-
+                    log.info("Обработка снапшота для хаба: {}", record.key());
                     List<DeviceActionRequest> actions = snapshotHandler.handle(record.value());
-                    log.info("🔄 Found {} potential actions for hub: {}", actions.size(), record.value().getHubId());
+                    log.info("Найдено {} действий для отправки в Hub Router", actions.size());
 
-                    for (DeviceActionRequest action : actions) {
+                    actions.forEach(action -> {
                         try {
-                            log.info("🚀 Sending command to Hub Router - Hub: {}, Scenario: {}, Sensor: {}, Action: {}",
-                                    action.getHubId(),
-                                    action.getScenarioName(),
-                                    action.getAction().getSensorId(),
-                                    action.getAction().getType());
-
-                            hubRouterClient.handleDeviceAction(action);
-                            log.info("✅ Command sent successfully to Hub Router");
-
+                            hubRouterStub.handleDeviceAction(action);
+                            log.info("Успешно отправлено действие в Hub Router: hub={}, scenario={}, sensor={}, type={}, value={}",
+                                    action.getHubId(), action.getScenarioName(), action.getAction().getSensorId(),
+                                    action.getAction().getType(), action.getAction().getValue());
                         } catch (Exception e) {
-                            log.error("❌ Failed to send command to Hub Router: {}", e.getMessage(), e);
+                            log.error("Ошибка отправки действия в Hub Router: {}", e.getMessage(), e);
                         }
-                    }
+                    });
 
                     currentOffset.put(
                             new TopicPartition(record.topic(), record.partition()),
@@ -85,7 +72,7 @@ public class SnapshotProcessor implements Runnable {
             }
         } catch (WakeupException ignored) {
         } catch (Exception e) {
-            log.error("Ошибка во время обработки событий от датчиков", e);
+            log.error("Ошибка во время обработки снапшотов", e);
         } finally {
             try {
                 consumer.commitSync(currentOffset);
