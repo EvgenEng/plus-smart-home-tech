@@ -9,6 +9,8 @@ analyzer:
         enable.auto.commit: false
         auto.offset.reset: "earliest"
         retry.backoff.ms: 1000
+        schema.registry.url: "http://localhost:8081"
+        specific.avro.reader: true
       hub_event:
         bootstrap.servers: "localhost:9092"
         key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
@@ -17,6 +19,8 @@ analyzer:
         enable.auto.commit: false
         auto.offset.reset: "earliest"
         retry.backoff.ms: 1000
+        schema.registry.url: "http://localhost:8081"
+        specific.avro.reader: true
       poll_duration_seconds:
         sensor_snapshot: 10
         hub_event: 10
