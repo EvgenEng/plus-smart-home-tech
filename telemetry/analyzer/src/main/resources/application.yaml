@@ -7,6 +7,7 @@ analyzer:
         value.deserializer: "ru.yandex.practicum.SensorSnapshotDeserializer"
         group.id: "analyzer-snapshot-consumer"
         enable.auto.commit: false
+        auto.offset.reset: "earliest"
         retry.backoff.ms: 1000
       hub_event:
         bootstrap.servers: "localhost:9092"
@@ -14,6 +15,7 @@ analyzer:
         value.deserializer: "ru.yandex.practicum.HubEventDeserializer"
         group.id: "analyzer-hub-consumer"
         enable.auto.commit: false
+        auto.offset.reset: "earliest"
         retry.backoff.ms: 1000
       poll_duration_seconds:
         sensor_snapshot: 10
@@ -35,9 +37,11 @@ spring:
   sql.init.mode: never
   datasource:
     driverClassName: "org.postgresql.Driver"
-    url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"
+    # url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"
+    url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
     username: "analyzer"
-    password: "analyzer"
+    # password: "analyzer"
+    password: ""
 
 logging:
   level:

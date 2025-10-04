@@ -42,9 +42,16 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
 
         log.info("🔍 Processing snapshot for hub: {} at {}", hubId, snapshotTimestamp);
 
-        if (snapshots.containsKey(hubId)) {
+        /*if (snapshots.containsKey(hubId)) {
             SensorsSnapshotAvro previousSnapshot = snapshots.get(hubId);
             if (previousSnapshot.getTimestamp().isAfter(snapshotTimestamp)) {
+                log.info("⏩ Skipping outdated snapshot for hub: {}", hubId);
+                return List.of();
+            }
+        }*/
+        if (snapshots.containsKey(hubId)) {
+            SensorsSnapshotAvro previousSnapshot = snapshots.get(hubId);
+            if (!snapshotTimestamp.isAfter(previousSnapshot.getTimestamp())) {
                 log.info("⏩ Skipping outdated snapshot for hub: {}", hubId);
                 return List.of();
             }
