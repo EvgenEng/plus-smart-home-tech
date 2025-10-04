@@ -16,19 +16,16 @@ import java.util.Properties;
 @RequiredArgsConstructor
 public class KafkaConsumerConfig {
 
-    @Value("${kafka.bootstrap-servers:localhost:9092}")
+    @Value("${kafka.bootstrap.servers}")
     private String bootstrapServers;
 
     @Bean
-    public KafkaConsumer<String, SpecificRecordBase> kafkaConsumer() {
+    public KafkaConsumer<String, SpecificRecordBase> getConsumer() {
         Properties config = new Properties();
-        config.put(ConsumerConfig.CLIENT_ID_CONFIG, "aggregator-consumer");
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "aggregator-group");
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SensorEventDeserializer.class);
-        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return new KafkaConsumer<>(config);
     }

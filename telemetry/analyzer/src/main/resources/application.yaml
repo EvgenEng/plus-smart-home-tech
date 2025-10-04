@@ -44,8 +44,7 @@ spring:
     # url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"
     url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
     username: "analyzer"
-    # password: "analyzer"
-    password: ""
+    password: "analyzer"
 
 logging:
   level:

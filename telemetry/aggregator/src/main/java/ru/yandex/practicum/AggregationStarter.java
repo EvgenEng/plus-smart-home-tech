@@ -3,6 +3,7 @@ package ru.yandex.practicum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.specific.SpecificRecordBase;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.Producer;
@@ -27,25 +28,22 @@ public class AggregationStarter {
 
     private final AggregatorEventHandler aggregatorEventHandler;
     private final Producer<String, SpecificRecordBase> producer;
-    private final org.apache.kafka.clients.consumer.Consumer<String, SpecificRecordBase> consumer;
+    private final Consumer<String, SpecificRecordBase> consumer;
 
     public void start() {
         try {
             consumer.subscribe(List.of(TELEMETRY_SENSORS_TOPIC));
             Runtime.getRuntime().addShutdownHook(new Thread(consumer::wakeup));
-
             while (true) {
                 ConsumerRecords<String, SpecificRecordBase> records = consumer.poll(CONSUME_ATTEMPT_TIMEOUT);
 
                 for (ConsumerRecord<String, SpecificRecordBase> record : records) {
-                    log.info("Обрабатываем сообщение от устройства: {}", record.key());
-
+                    log.info("обрабатываем сообщение {}", record.value());
                     SensorEventAvro eventAvro = (SensorEventAvro) record.value();
                     Optional<SensorsSnapshotAvro> snapshotAvro = aggregatorEventHandler.updateState(eventAvro);
-
+                    log.info("Получили снимок состояния {}", snapshotAvro);
                     if (snapshotAvro.isPresent()) {
-                        log.info("Снапшот обновлен для хаба: {}", eventAvro.getHubId());
-
+                        log.info("запись снимка в топик Kafka");
                         ProducerRecord<String, SpecificRecordBase> message = new ProducerRecord<>(
                                 TELEMETRY_SNAPSHOT_TOPIC,
                                 null,
@@ -59,7 +57,6 @@ public class AggregationStarter {
                 consumer.commitSync();
             }
         } catch (WakeupException ignored) {
-            // Игнорируем - закрываем в блоке finally
         } catch (Exception e) {
             log.error("Ошибка во время обработки событий от датчиков", e);
         } finally {

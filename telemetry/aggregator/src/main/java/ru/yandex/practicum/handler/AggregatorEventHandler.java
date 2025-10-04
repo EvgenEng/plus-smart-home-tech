@@ -12,26 +12,24 @@ import java.util.Optional;
 
 @Component
 public class AggregatorEventHandler {
-    private final Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
+    Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
 
     public Optional<SensorsSnapshotAvro> updateState(SensorEventAvro event) {
-        SensorsSnapshotAvro snapshot = snapshots.getOrDefault(event.getHubId(),
-                createSensorSnapshotAvro(event.getHubId()));
+
+        SensorsSnapshotAvro snapshot = snapshots.getOrDefault(event.getHubId(), createSensorSnapshotAvro(event.getHubId()));
 
         SensorStateAvro oldState = snapshot.getSensorsState().get(event.getId());
 
-        if (oldState != null &&
-                (oldState.getTimestamp().isAfter(event.getTimestamp()) ||
-                        oldState.getData().equals(event.getPayload()))) {
+        if (oldState != null && (oldState.getTimestamp().isAfter(event.getTimestamp()) || oldState.getData().equals(event.getPayload()))) {
             return Optional.empty();
+        } else {
+            SensorStateAvro newState = createSensorStateAvro(event);
+            snapshot.getSensorsState().put(event.getId(), newState);
+
+            snapshot.setTimestamp(event.getTimestamp());
+            snapshots.put(event.getHubId(), snapshot);
+            return Optional.of(snapshot);
         }
-
-        SensorStateAvro newState = createSensorStateAvro(event);
-        snapshot.getSensorsState().put(event.getId(), newState);
-        snapshot.setTimestamp(event.getTimestamp());
-
-        snapshots.put(event.getHubId(), snapshot);
-        return Optional.of(snapshot);
     }
 
     private SensorsSnapshotAvro createSensorSnapshotAvro(String hubId) {
