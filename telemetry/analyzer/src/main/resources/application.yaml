@@ -1,0 +1,52 @@
+analyzer:
+  kafka:
+    consumer:
+      sensor_snapshot:
+        bootstrap.servers: "localhost:9092"
+        key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        value.deserializer: "ru.yandex.practicum.SensorSnapshotDeserializer"
+        group.id: "analyzer-snapshot-consumer"
+        enable.auto.commit: false
+        auto.offset.reset: "earliest"
+        retry.backoff.ms: 1000
+      hub_event:
+        bootstrap.servers: "localhost:9092"
+        key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        value.deserializer: "ru.yandex.practicum.HubEventDeserializer"
+        group.id: "analyzer-hub-consumer"
+        enable.auto.commit: false
+        auto.offset.reset: "earliest"
+        retry.backoff.ms: 1000
+      poll_duration_seconds:
+        sensor_snapshot: 10
+        hub_event: 10
+
+grpc:
+  client:
+    hub-router:
+      address: 'static://localhost:59090'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+
+spring:
+  jpa:
+    hibernate.ddl-auto: create
+    properties.hibernate.format_sql: true
+    properties.hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql.init.mode: never
+  datasource:
+    driverClassName: "org.postgresql.Driver"
+    # url: "jdbc:postgresql://postgres:5432/telemetry_analyzer"
+    url: "jdbc:postgresql://localhost:5432/telemetry_analyzer"
+    username: "analyzer"
+    # password: "analyzer"
+    password: ""
+
+logging:
+  level:
+    ru.yandex.practicum: DEBUG
+    org.springframework: INFO
+    io.grpc: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.apache.kafka: DEBUG
