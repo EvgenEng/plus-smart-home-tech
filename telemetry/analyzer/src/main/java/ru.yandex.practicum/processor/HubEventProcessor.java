@@ -2,69 +2,68 @@ package ru.yandex.practicum.processor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.errors.WakeupException;
-import org.springframework.stereotype.Service;
-import ru.yandex.practicum.config.KafkaConsumerProperties;
-import ru.yandex.practicum.exception.DuplicateException;
-import ru.yandex.practicum.exception.NotFoundException;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.springframework.stereotype.Component;
+import ru.yandex.practicum.kafka.KafkaConfigProperties;
 import ru.yandex.practicum.handler.HubEventHandler;
 import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 
 import java.time.Duration;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-@Service
 @Slf4j
+@Component
 @RequiredArgsConstructor
 public class HubEventProcessor implements Runnable {
-    private final String TELEMETRY_HUBS_TOPIC = "telemetry.hubs.v1";
 
-    private final Consumer<String, HubEventAvro> consumer;
-    private final Map<TopicPartition, OffsetAndMetadata> currentOffset = new HashMap<>();
-    private final HubEventHandler hubEventHandler;
-    private final KafkaConsumerProperties properties;
+    private final KafkaConsumer<String, HubEventAvro> hubEventConsumer;
+    private final KafkaConfigProperties kafkaProperties;
+    private final List<HubEventHandler> hubEventHandlers;
 
     @Override
     public void run() {
+        log.info("Starting hub event processor...");
+
         try {
-            consumer.subscribe(List.of(TELEMETRY_HUBS_TOPIC));
-            Runtime.getRuntime().addShutdownHook(new Thread(consumer::wakeup));
+            hubEventConsumer.subscribe(Collections.singletonList(kafkaProperties.getTopics().getHubEvents()));
+
             while (true) {
-                ConsumerRecords<String, HubEventAvro> records =
-                        consumer.poll(Duration.ofSeconds(properties.getPollDurationSeconds().getHubEvent()));
-                for (ConsumerRecord<String, HubEventAvro> record : records) {
-                    try {
-                        hubEventHandler.handle(record.value());
-                    } catch (DuplicateException | NotFoundException e) {
-                        log.info("При обработке получено исключение: {} {}", e.getClass().getSimpleName(), e.getMessage());
+                try {
+                    ConsumerRecords<String, HubEventAvro> records =
+                            hubEventConsumer.poll(Duration.ofMillis(kafkaProperties.getConsumer().getConsumeTimeout()));
+
+                    for (ConsumerRecord<String, HubEventAvro> record : records) {
+                        log.info("Received hub event: {}", record.key());
+                        processHubEvent(record.value());
                     }
-                    currentOffset.put(
-                            new TopicPartition(record.topic(), record.partition()),
-                            new OffsetAndMetadata(record.offset() + 1)
-                    );
+                    if (!records.isEmpty()) {
+                        hubEventConsumer.commitSync();
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing hub event", e);
                 }
-                consumer.commitAsync((offsets, exception) -> {
-                    if (exception != null) {
-                        log.warn("Во время фиксации произошла ошибка. Офсет: {}", offsets, exception);
-                    }
-                });
             }
-        } catch (WakeupException ignored) {
         } catch (Exception e) {
-            log.error("Ошибка во время обработки событий от хабов", e);
-        } finally {
-            try {
-                consumer.commitSync(currentOffset);
-            } finally {
-                consumer.close();
+            log.error("Error in hub event processor", e);
+        }
+    }
+
+    private void processHubEvent(HubEventAvro hubEvent) {
+        log.info("Processing hub event: {}", hubEvent.getPayload().getClass().getSimpleName());
+
+        try {
+            String payloadType = hubEvent.getPayload().getClass().getSimpleName();
+            for (HubEventHandler handler : hubEventHandlers) {
+                if (handler.getTypeOfPayload().equals(payloadType)) {
+                    handler.handle(hubEvent);
+                    break;
+                }
             }
+        } catch (Exception e) {
+            log.error("Error while processing hub event", e);
         }
     }
 }

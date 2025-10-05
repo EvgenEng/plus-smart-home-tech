@@ -40,6 +40,11 @@ public class HubEventHandlerImpl implements HubEventHandler {
     private final SensorRepository sensorRepository;
 
     @Override
+    public String getTypeOfPayload() {
+        return "HubEvent";
+    }
+
+    @Override
     @Transactional
     public void handle(HubEventAvro event) {
         Object payload = event.getPayload();
