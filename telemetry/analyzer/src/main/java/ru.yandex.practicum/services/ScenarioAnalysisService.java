@@ -106,26 +106,28 @@ public class ScenarioAnalysisService {
     private Integer extractSensorValue(SensorStateAvro sensorState) {
         Object data = sensorState.getData();
         Integer value = null;
-        switch (data) {
-            case ClimateSensorAvro climateSensor -> {
-                value = climateSensor.getTemperatureC();
-                log.info("Extracted temperature value: {} from ClimateSensor", value);
-            }
-            case LightSensorAvro lightSensor -> {
-                value = lightSensor.getLuminosity();
-                log.info("Extracted luminosity value: {} from LightSensor", value);
-            }
-            case MotionSensorAvro motionSensor -> {
-                value = motionSensor.getMotion() ? 1 : 0;
-                log.info("Extracted motion value: {} from MotionSensor", value);
-            }
-            case SwitchSensorAvro switchSensor -> {
-                value = switchSensor.getState() ? 1 : 0;
-                log.info("Extracted switch value: {} from SwitchSensor", value);
-            }
-            default -> log.warn("Unknown sensor data type: {} for sensor",
+
+        if (data instanceof ClimateSensorAvro) {
+            ClimateSensorAvro climateSensor = (ClimateSensorAvro) data;
+            value = climateSensor.getTemperatureC();
+            log.info("Extracted temperature value: {} from ClimateSensor", value);
+        } else if (data instanceof LightSensorAvro) {
+            LightSensorAvro lightSensor = (LightSensorAvro) data;
+            value = lightSensor.getLuminosity();
+            log.info("Extracted luminosity value: {} from LightSensor", value);
+        } else if (data instanceof MotionSensorAvro) {
+            MotionSensorAvro motionSensor = (MotionSensorAvro) data;
+            value = motionSensor.getMotion() ? 1 : 0;
+            log.info("Extracted motion value: {} from MotionSensor", value);
+        } else if (data instanceof SwitchSensorAvro) {
+            SwitchSensorAvro switchSensor = (SwitchSensorAvro) data;
+            value = switchSensor.getState() ? 1 : 0;
+            log.info("Extracted switch value: {} from SwitchSensor", value);
+        } else {
+            log.warn("Unknown sensor data type: {} for sensor",
                     data != null ? data.getClass().getSimpleName() : "null");
         }
+
         return value;
     }
 
