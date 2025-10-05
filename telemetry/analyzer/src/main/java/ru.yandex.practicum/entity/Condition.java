@@ -13,8 +13,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import ru.yandex.practicum.model.enums.ConditionOperation;
-import ru.yandex.practicum.model.enums.ConditionType;
+import ru.yandex.practicum.kafka.telemetry.event.ConditionTypeAvro;
+import ru.yandex.practicum.kafka.telemetry.event.ConditionOperationAvro;
 
 @Entity
 @Table(name = "conditions")
@@ -30,11 +30,11 @@ public class Condition {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")
-    private ConditionType type;
+    private ConditionTypeAvro type;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "operation")
-    private ConditionOperation operation;
+    private ConditionOperationAvro operation;
 
     @Column(name = "value")
     private Integer value;

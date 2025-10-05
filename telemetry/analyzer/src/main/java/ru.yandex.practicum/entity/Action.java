@@ -13,7 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import ru.yandex.practicum.model.enums.ActionType;
+import ru.yandex.practicum.kafka.telemetry.event.ActionTypeAvro;
 
 @Entity
 @Table(name = "actions")
@@ -29,7 +29,7 @@ public class Action {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")
-    private ActionType type;
+    private ActionTypeAvro type;
 
     @Column(name = "value")
     private Integer value;

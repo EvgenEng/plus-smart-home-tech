@@ -19,7 +19,6 @@ import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 import ru.yandex.practicum.kafka.telemetry.event.ScenarioAddedEventAvro;
 import ru.yandex.practicum.kafka.telemetry.event.ScenarioConditionAvro;
 import ru.yandex.practicum.kafka.telemetry.event.ScenarioRemovedEventAvro;
-import ru.yandex.practicum.mapper.Mapper;
 import ru.yandex.practicum.repository.ActionRepository;
 import ru.yandex.practicum.repository.ConditionRepository;
 import ru.yandex.practicum.repository.ScenarioRepository;
@@ -39,7 +38,6 @@ public class HubEventHandlerImpl implements HubEventHandler {
     private final ConditionRepository conditionRepository;
     private final ActionRepository actionRepository;
     private final SensorRepository sensorRepository;
-    private final Mapper mapper;
 
     @Override
     @Transactional
@@ -84,8 +82,8 @@ public class HubEventHandlerImpl implements HubEventHandler {
 
         for (ScenarioConditionAvro conditionAvro : eventAvro.getConditions()) {
             Condition condition = Condition.builder()
-                    .type(mapper.toConditionType(conditionAvro.getType()))
-                    .operation(mapper.toConditionOperation(conditionAvro.getOperation()))
+                    .type(conditionAvro.getType())
+                    .operation(conditionAvro.getOperation())
                     .value(extractValue(conditionAvro))
                     .build();
 
@@ -105,7 +103,7 @@ public class HubEventHandlerImpl implements HubEventHandler {
 
         for (DeviceActionAvro actionAvro : eventAvro.getActions()) {
             Action action = Action.builder()
-                    .type(mapper.toActionType(actionAvro.getType()))
+                    .type(actionAvro.getType())
                     .value(actionAvro.getValue())
                     .build();
 

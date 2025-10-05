@@ -17,7 +17,6 @@ import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SwitchSensorAvro;
 import ru.yandex.practicum.kafka.telemetry.event.TemperatureSensorAvro;
 import ru.yandex.practicum.mapper.Mapper;
-import ru.yandex.practicum.model.enums.ConditionOperation;
 import ru.yandex.practicum.repository.ScenarioRepository;
 
 import java.time.Instant;
@@ -111,7 +110,7 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
     private boolean checkCondition(ru.yandex.practicum.entity.Condition condition, SensorStateAvro sensorState) {
         Object data = sensorState.getData();
         Integer value = condition.getValue();
-        ConditionOperation operation = condition.getOperation();
+        var operation = condition.getOperation();
 
         return switch (condition.getType()) {
             case TEMPERATURE -> {
@@ -146,7 +145,8 @@ public class SnapshotHandlerImpl implements SnapshotHandler {
         };
     }
 
-    private boolean checkByConditionOperation(int currentValue, int conditionValue, ConditionOperation operation) {
+    private boolean checkByConditionOperation(int currentValue, int conditionValue,
+                                              ru.yandex.practicum.kafka.telemetry.event.ConditionOperationAvro operation) {
         return switch (operation) {
             case EQUALS -> currentValue == conditionValue;
             case GREATER_THAN -> currentValue > conditionValue;
