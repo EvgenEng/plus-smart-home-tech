@@ -1,4 +1,4 @@
-package ru.yandex.practicum.processor;
+package ru.yandex.practicum.processors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +7,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.kafka.KafkaConfigProperties;
-import ru.yandex.practicum.handler.HubEventHandler;
+import ru.yandex.practicum.services.HubEventHandler;
 import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 
 import java.time.Duration;

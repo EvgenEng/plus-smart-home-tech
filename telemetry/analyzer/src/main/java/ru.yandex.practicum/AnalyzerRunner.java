@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.processor.HubEventProcessor;
-import ru.yandex.practicum.processor.SnapshotProcessor;
+import ru.yandex.practicum.processors.HubEventProcessor;
+import ru.yandex.practicum.processors.SnapshotProcessor;
 
 @Slf4j
 @Component

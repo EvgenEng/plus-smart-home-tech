@@ -1,4 +1,4 @@
-package ru.yandex.practicum.entity;
+package ru.yandex.practicum.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,32 +10,35 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import ru.yandex.practicum.kafka.telemetry.event.ConditionTypeAvro;
+import lombok.experimental.FieldDefaults;
 import ru.yandex.practicum.kafka.telemetry.event.ConditionOperationAvro;
+import ru.yandex.practicum.kafka.telemetry.event.ConditionTypeAvro;
+
+import static lombok.AccessLevel.PRIVATE;
 
 @Entity
 @Table(name = "conditions")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@FieldDefaults(level = PRIVATE)
 public class Condition {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    Long id;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")
-    private ConditionTypeAvro type;
+    ConditionTypeAvro type;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "operation")
-    private ConditionOperationAvro operation;
+    ConditionOperationAvro operation;
 
-    @Column(name = "value")
-    private Integer value;
+    @Column(name = "condition_value")
+    Integer value;
 }

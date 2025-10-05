@@ -14,26 +14,26 @@ CREATE TABLE IF NOT EXISTS conditions (
                                           id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                                           type VARCHAR,
                                           operation VARCHAR,
-                                          value INTEGER
+                                          condition_value INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS actions (
                                        id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                                        type VARCHAR,
-                                       value INTEGER
+                                       action_value INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS scenario_conditions (
-                                                   scenario_id BIGINT REFERENCES scenarios(id) ON DELETE CASCADE,
-    sensor_id VARCHAR REFERENCES sensors(id) ON DELETE RESTRICT,
-    condition_id BIGINT REFERENCES conditions(id) ON DELETE CASCADE,
+                                                   scenario_id BIGINT REFERENCES scenarios(id),
+    sensor_id VARCHAR REFERENCES sensors(id),
+    condition_id BIGINT REFERENCES conditions(id),
     PRIMARY KEY (scenario_id, sensor_id, condition_id)
     );
 
 CREATE TABLE IF NOT EXISTS scenario_actions (
-                                                scenario_id BIGINT REFERENCES scenarios(id) ON DELETE CASCADE,
-    sensor_id VARCHAR REFERENCES sensors(id) ON DELETE RESTRICT,
-    action_id BIGINT REFERENCES actions(id) ON DELETE CASCADE,
+                                                scenario_id BIGINT REFERENCES scenarios(id),
+    sensor_id VARCHAR REFERENCES sensors(id),
+    action_id BIGINT REFERENCES actions(id),
     PRIMARY KEY (scenario_id, sensor_id, action_id)
     );
 

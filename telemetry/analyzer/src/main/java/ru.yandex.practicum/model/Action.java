@@ -1,4 +1,4 @@
-package ru.yandex.practicum.entity;
+package ru.yandex.practicum.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,27 +10,30 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.experimental.FieldDefaults;
 import ru.yandex.practicum.kafka.telemetry.event.ActionTypeAvro;
+
+import static lombok.AccessLevel.PRIVATE;
 
 @Entity
 @Table(name = "actions")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@FieldDefaults(level = PRIVATE)
 public class Action {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    Long id;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")
-    private ActionTypeAvro type;
+    ActionTypeAvro type;
 
-    @Column(name = "value")
-    private Integer value;
+    @Column(name = "action_value")
+    Integer value;
 }

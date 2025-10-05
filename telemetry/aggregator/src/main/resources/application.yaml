@@ -16,3 +16,4 @@ kafka:
 
     # Topics
     sensor-events-topic: telemetry.sensors.v1
+    sensor-snapshots-topic: telemetry.snapshots.v1

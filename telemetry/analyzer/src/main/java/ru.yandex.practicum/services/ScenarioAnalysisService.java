@@ -5,19 +5,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.grpc.HubRouterClient;
-import ru.yandex.practicum.entity.Action;
-import ru.yandex.practicum.entity.Condition;
-import ru.yandex.practicum.entity.Scenario;
-import ru.yandex.practicum.entity.ScenarioAction;
-import ru.yandex.practicum.entity.ScenarioCondition;
-import ru.yandex.practicum.repository.ScenarioRepository;
 import ru.yandex.practicum.kafka.telemetry.event.ClimateSensorAvro;
 import ru.yandex.practicum.kafka.telemetry.event.LightSensorAvro;
 import ru.yandex.practicum.kafka.telemetry.event.MotionSensorAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SensorStateAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SwitchSensorAvro;
-import ru.yandex.practicum.kafka.telemetry.event.TemperatureSensorAvro;
+import ru.yandex.practicum.model.Action;
+import ru.yandex.practicum.model.Condition;
+import ru.yandex.practicum.model.Scenario;
+import ru.yandex.practicum.repository.ScenarioRepository;
 
 import java.util.List;
 import java.util.Map;
@@ -36,7 +33,7 @@ public class ScenarioAnalysisService {
         log.info("Analyzing scenarios for hub: {}", hubId);
 
         // Получаю все сценарии для хаба
-        List<Scenario> scenarios = scenarioRepository.findByHubIdWithDetails(hubId);
+        List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
 
         if (scenarios.isEmpty()) {
             log.info("No scenarios found for hub: {}", hubId);
@@ -63,13 +60,13 @@ public class ScenarioAnalysisService {
         }
     }
 
-    private boolean checkAllConditions(List<ScenarioCondition> conditions, SensorsSnapshotAvro snapshot) {
+    private boolean checkAllConditions(Map<String, Condition> conditions, SensorsSnapshotAvro snapshot) {
         if (conditions.isEmpty()) {
             return false;
         }
-        for (ScenarioCondition scenarioCondition : conditions) {
-            String sensorId = scenarioCondition.getSensor().getId();
-            Condition condition = scenarioCondition.getCondition();
+        for (Map.Entry<String, Condition> entry : conditions.entrySet()) {
+            String sensorId = entry.getKey();
+            Condition condition = entry.getValue();
             if (!checkCondition(sensorId, condition, snapshot)) {
                 return false;
             }
@@ -109,39 +106,33 @@ public class ScenarioAnalysisService {
     private Integer extractSensorValue(SensorStateAvro sensorState) {
         Object data = sensorState.getData();
         Integer value = null;
-
-        // Заменяем pattern matching на instanceof для Java 17
-        if (data instanceof ClimateSensorAvro) {
-            ClimateSensorAvro climateSensor = (ClimateSensorAvro) data;
-            value = climateSensor.getTemperatureC();
-            log.info("Extracted temperature value: {} from ClimateSensor", value);
-        } else if (data instanceof LightSensorAvro) {
-            LightSensorAvro lightSensor = (LightSensorAvro) data;
-            value = lightSensor.getLuminosity();
-            log.info("Extracted luminosity value: {} from LightSensor", value);
-        } else if (data instanceof MotionSensorAvro) {
-            MotionSensorAvro motionSensor = (MotionSensorAvro) data;
-            value = motionSensor.getMotion() ? 1 : 0;
-            log.info("Extracted motion value: {} from MotionSensor", value);
-        } else if (data instanceof SwitchSensorAvro) {
-            SwitchSensorAvro switchSensor = (SwitchSensorAvro) data;
-            value = switchSensor.getState() ? 1 : 0;
-            log.info("Extracted switch value: {} from SwitchSensor", value);
-        } else if (data instanceof TemperatureSensorAvro) {
-            TemperatureSensorAvro temperatureSensor = (TemperatureSensorAvro) data;
-            value = temperatureSensor.getTemperatureC();
-            log.info("Extracted temperature value: {} from TemperatureSensor", value);
-        } else {
-            log.warn("Unknown sensor data type: {} for sensor",
+        switch (data) {
+            case ClimateSensorAvro climateSensor -> {
+                value = climateSensor.getTemperatureC();
+                log.info("Extracted temperature value: {} from ClimateSensor", value);
+            }
+            case LightSensorAvro lightSensor -> {
+                value = lightSensor.getLuminosity();
+                log.info("Extracted luminosity value: {} from LightSensor", value);
+            }
+            case MotionSensorAvro motionSensor -> {
+                value = motionSensor.getMotion() ? 1 : 0;
+                log.info("Extracted motion value: {} from MotionSensor", value);
+            }
+            case SwitchSensorAvro switchSensor -> {
+                value = switchSensor.getState() ? 1 : 0;
+                log.info("Extracted switch value: {} from SwitchSensor", value);
+            }
+            default -> log.warn("Unknown sensor data type: {} for sensor",
                     data != null ? data.getClass().getSimpleName() : "null");
         }
         return value;
     }
 
-    private void executeActions(List<ScenarioAction> actions, String scenarioName, String hubId) {
-        for (ScenarioAction scenarioAction : actions) {
-            String sensorId = scenarioAction.getSensor().getId();
-            Action action = scenarioAction.getAction();
+    private void executeActions(Map<String, Action> actions, String scenarioName, String hubId) {
+        for (Map.Entry<String, Action> entry : actions.entrySet()) {
+            String sensorId = entry.getKey();
+            Action action = entry.getValue();
             log.info("Executing action: device={}, type={}, value={}",
                     sensorId, action.getType(), action.getValue());
 
