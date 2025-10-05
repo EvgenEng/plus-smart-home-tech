@@ -3,7 +3,7 @@ grpc:
     port: 59091
   client:
     echo:
-      address: 'static://127.0.0.1:9090'
+      address: 'static://localhost:59091'
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext
