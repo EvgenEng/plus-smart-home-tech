@@ -14,14 +14,14 @@ public class SwitchSensorEventHandler implements SensorEventHandler {
 
     @Override
     public SensorEventProto.PayloadCase getMessageType() {
-        return SensorEventProto.PayloadCase.SWITCH_SENSOR;
+        return SensorEventProto.PayloadCase.SWITCH_SENSOR_EVENT;
     }
 
     @Override
     public void handle(SensorEventProto event) {
         log.info("Processing switch sensor event from device: {}", event.getId());
 
-        var switchSensor = event.getSwitchSensor();
+        var switchSensor = event.getSwitchSensorEvent();
         var switchEvent = new ru.yandex.practicum.model.sensor.SwitchSensorEvent();
         setCommonSensorFields(switchEvent, event);
         switchEvent.setState(switchSensor.getState());

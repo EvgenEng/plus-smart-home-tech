@@ -14,14 +14,14 @@ public class ClimateSensorEventHandler implements SensorEventHandler {
 
     @Override
     public SensorEventProto.PayloadCase getMessageType() {
-        return SensorEventProto.PayloadCase.CLIMATE_SENSOR;
+        return SensorEventProto.PayloadCase.CLIMATE_SENSOR_EVENT;
     }
 
     @Override
     public void handle(SensorEventProto event) {
         log.info("Processing climate sensor event from device: {}", event.getId());
 
-        var climateSensor = event.getClimateSensor();
+        var climateSensor = event.getClimateSensorEvent();
         var climateEvent = new ru.yandex.practicum.model.sensor.ClimateSensorEvent();
         setCommonSensorFields(climateEvent, event);
         climateEvent.setTemperatureC(climateSensor.getTemperatureC());
