@@ -14,15 +14,14 @@ public class MotionSensorEventHandler implements SensorEventHandler {
 
     @Override
     public SensorEventProto.PayloadCase getMessageType() {
-        return SensorEventProto.PayloadCase.MOTION_SENSOR;
+        return SensorEventProto.PayloadCase.MOTION_SENSOR_EVENT;
     }
 
     @Override
     public void handle(SensorEventProto event) {
         log.info("Processing motion sensor event from device: {}", event.getId());
 
-        // Конвертация и обработка события
-        var motionSensor = event.getMotionSensor();
+        var motionSensor = event.getMotionSensorEvent();
         var motionEvent = new ru.yandex.practicum.model.sensor.MotionSensorEvent();
         setCommonSensorFields(motionEvent, event);
         motionEvent.setLinkQuality(motionSensor.getLinkQuality());

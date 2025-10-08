@@ -1,20 +1,12 @@
+kafka:
+  config:
+    bootstrap-servers: localhost:9092
+    client-id-config: producer-1
+    producer-key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    producer-value-serializer: ru.yandex.practicum.kafka.telemetry.serialization.AvroSerializer
+    sensor-events-topic: telemetry.sensors.v1
+    hub-events-topic: telemetry.hubs.v1
+
 grpc:
   server:
     port: 59091
-  client:
-    echo:
-      address: 'static://127.0.0.1:9090'
-      enableKeepAlive: true
-      keepAliveWithoutCalls: true
-      negotiationType: plaintext
-
-spring:
-  application:
-    name: collector
-
-kafka:
-  bootstrap-servers: localhost:9092
-
-logging:
-  level:
-    ru.yandex.practicum: DEBUG

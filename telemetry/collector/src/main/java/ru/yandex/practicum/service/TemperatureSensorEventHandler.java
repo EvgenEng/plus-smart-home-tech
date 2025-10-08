@@ -14,14 +14,14 @@ public class TemperatureSensorEventHandler implements SensorEventHandler {
 
     @Override
     public SensorEventProto.PayloadCase getMessageType() {
-        return SensorEventProto.PayloadCase.TEMPERATURE_SENSOR;
+        return SensorEventProto.PayloadCase.TEMPERATURE_SENSOR_EVENT;
     }
 
     @Override
     public void handle(SensorEventProto event) {
         log.info("Processing temperature sensor event from device: {}", event.getId());
 
-        var tempSensor = event.getTemperatureSensor();
+        var tempSensor = event.getTemperatureSensorEvent();
         var tempEvent = new ru.yandex.practicum.model.sensor.TemperatureSensorEvent();
         setCommonSensorFields(tempEvent, event);
         tempEvent.setTemperatureC(tempSensor.getTemperatureC());

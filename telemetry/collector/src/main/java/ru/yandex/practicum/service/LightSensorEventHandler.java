@@ -14,14 +14,14 @@ public class LightSensorEventHandler implements SensorEventHandler {
 
     @Override
     public SensorEventProto.PayloadCase getMessageType() {
-        return SensorEventProto.PayloadCase.LIGHT_SENSOR;
+        return SensorEventProto.PayloadCase.LIGHT_SENSOR_EVENT;
     }
 
     @Override
     public void handle(SensorEventProto event) {
         log.info("Processing light sensor event from device: {}", event.getId());
 
-        var lightSensor = event.getLightSensor();
+        var lightSensor = event.getLightSensorEvent();
         var lightEvent = new ru.yandex.practicum.model.sensor.LightSensorEvent();
         setCommonSensorFields(lightEvent, event);
         lightEvent.setLinkQuality(lightSensor.getLinkQuality());

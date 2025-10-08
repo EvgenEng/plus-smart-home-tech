@@ -1,4 +1,4 @@
-package ru.yandex.practicum.serializer;
+package ru.yandex.practicum.kafka.telemetry.serialization;
 
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
@@ -11,21 +11,23 @@ import org.apache.kafka.common.serialization.Serializer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-public class GeneralAvroSerializer implements Serializer<SpecificRecordBase> {
-    private final EncoderFactory encoderFactory = EncoderFactory.get();
-    private BinaryEncoder encoder;
+public class AvroSerializer implements Serializer<SpecificRecordBase> {
 
+    private final EncoderFactory encoderFactory = EncoderFactory.get();
+
+    @Override
     public byte[] serialize(String topic, SpecificRecordBase data) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            if (data != null) {
-                DatumWriter<SpecificRecordBase> writer = new SpecificDatumWriter<>(data.getSchema());
-                encoder = encoderFactory.binaryEncoder(out, encoder);
-                writer.write(data, encoder);
-                encoder.flush();
+            if (data == null) {
+                return null;
             }
+            BinaryEncoder encoder = encoderFactory.binaryEncoder(out, null);
+            DatumWriter<SpecificRecordBase> writer = new SpecificDatumWriter<>(data.getSchema());
+            writer.write(data, encoder);
+            encoder.flush();
             return out.toByteArray();
         } catch (IOException ex) {
-            throw new SerializationException("Ошибка сериализации данных для топика [" + topic + "]", ex);
+            throw new SerializationException("Error serializing data for topic [" + topic + "]", ex);
         }
     }
 }
