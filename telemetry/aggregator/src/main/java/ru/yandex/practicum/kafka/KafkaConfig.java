@@ -24,7 +24,7 @@ public class KafkaConfig {
         this.kafkaProperties = properties;
     }
 
-    @Bean
+    /*@Bean
     public Producer<String, SpecificRecordBase> producer() {
         Properties properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
@@ -32,7 +32,7 @@ public class KafkaConfig {
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducerKeySerializer());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducerValueSerializer());
         return new KafkaProducer<>(properties);
-    }
+    }*/
 
     @Bean
     public KafkaConsumer<String, SensorEventAvro> getKafkaConsumer() {

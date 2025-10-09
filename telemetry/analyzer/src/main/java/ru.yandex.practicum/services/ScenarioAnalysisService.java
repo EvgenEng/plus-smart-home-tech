@@ -75,10 +75,10 @@ public class ScenarioAnalysisService {
     }
 
     private boolean checkCondition(String sensorId, Condition condition, SensorsSnapshotAvro snapshot) {
-        Integer sensorValue = findSensorValue(sensorId, snapshot);
+        Integer sensorValue = extractSensorValue(sensorId, snapshot);
 
         if (sensorValue == null) {
-            log.warn("Sensor {} not found in snapshot", sensorId);
+            log.warn("Sensor {} not found in snapshot or unknown sensor type", sensorId);
             return false;
         }
 
@@ -93,42 +93,42 @@ public class ScenarioAnalysisService {
         return result;
     }
 
-    private Integer findSensorValue(String sensorId, SensorsSnapshotAvro snapshot) {
+    private Integer extractSensorValue(String sensorId, SensorsSnapshotAvro snapshot) {
         Map<String, SensorStateAvro> sensorsState = snapshot.getSensorsState();
         SensorStateAvro sensorState = sensorsState.get(sensorId);
+
         if (sensorState == null) {
             log.warn("Sensor {} not found in snapshot", sensorId);
             return null;
         }
-        return extractSensorValue(sensorState);
-    }
 
-    private Integer extractSensorValue(SensorStateAvro sensorState) {
         Object data = sensorState.getData();
-        Integer value = null;
-
-        if (data instanceof ClimateSensorAvro) {
-            ClimateSensorAvro climateSensor = (ClimateSensorAvro) data;
-            value = climateSensor.getTemperatureC();
-            log.info("Extracted temperature value: {} from ClimateSensor", value);
-        } else if (data instanceof LightSensorAvro) {
-            LightSensorAvro lightSensor = (LightSensorAvro) data;
-            value = lightSensor.getLuminosity();
-            log.info("Extracted luminosity value: {} from LightSensor", value);
-        } else if (data instanceof MotionSensorAvro) {
-            MotionSensorAvro motionSensor = (MotionSensorAvro) data;
-            value = motionSensor.getMotion() ? 1 : 0;
-            log.info("Extracted motion value: {} from MotionSensor", value);
-        } else if (data instanceof SwitchSensorAvro) {
-            SwitchSensorAvro switchSensor = (SwitchSensorAvro) data;
-            value = switchSensor.getState() ? 1 : 0;
-            log.info("Extracted switch value: {} from SwitchSensor", value);
-        } else {
-            log.warn("Unknown sensor data type: {} for sensor",
-                    data != null ? data.getClass().getSimpleName() : "null");
+        if (data == null) {
+            log.warn("Sensor {} has null data", sensorId);
+            return null;
         }
 
-        return value;
+        if (data instanceof ClimateSensorAvro climateSensor) {
+            Integer value = climateSensor.getTemperatureC();
+            log.info("Extracted temperature value: {} from ClimateSensor for sensor {}", value, sensorId);
+            return value;
+        } else if (data instanceof LightSensorAvro lightSensor) {
+            Integer value = lightSensor.getLuminosity();
+            log.info("Extracted luminosity value: {} from LightSensor for sensor {}", value, sensorId);
+            return value;
+        } else if (data instanceof MotionSensorAvro motionSensor) {
+            Integer value = motionSensor.getMotion() ? 1 : 0;
+            log.info("Extracted motion value: {} from MotionSensor for sensor {}", value, sensorId);
+            return value;
+        } else if (data instanceof SwitchSensorAvro switchSensor) {
+            Integer value = switchSensor.getState() ? 1 : 0;
+            log.info("Extracted switch value: {} from SwitchSensor for sensor {}", value, sensorId);
+            return value;
+        } else {
+            log.warn("Unknown sensor data type: {} for sensor {}",
+                    data.getClass().getSimpleName(), sensorId);
+            return null;
+        }
     }
 
     private void executeActions(Map<String, Action> actions, String scenarioName, String hubId) {

@@ -30,17 +30,22 @@ public class AggregationStarter {
             while (true) {
                 ConsumerRecords<String, SensorEventAvro> records =
                         consumer.poll(kafkaConfig.getConsumeAttemptTimeout());
-                int count = 0;
+
+                int processedCount = 0;
                 for (ConsumerRecord<String, SensorEventAvro> record : records) {
                     handleRecord(record);
-                    manageOffsets(record, count);
-                    count++;
+                    consumer.trackOffset(record.topic(), record.partition(), record.offset() + 1);
+                    processedCount++;
                 }
-                consumer.commitAsync();
+
+                if (processedCount > 0) {
+                    consumer.commitAsyncCurrentOffsets();
+                    log.debug("Committed offsets for {} processed records", processedCount);
+                }
             }
 
         } catch (WakeupException ignores) {
-
+            // Игнорируем, это нормальное завершение
         } catch (Exception e) {
             log.error("An error occurred while processing events from sensors", e);
         } finally {
@@ -60,12 +65,5 @@ public class AggregationStarter {
     private void handleRecord(ConsumerRecord<String, SensorEventAvro> consumerRecord) {
         Optional<SensorsSnapshotAvro> snapshotAvro = snapshotService.updateState(consumerRecord.value());
         snapshotAvro.ifPresent(snapshotService::collectSensorSnapshot);
-    }
-
-    private void manageOffsets(ConsumerRecord<String, SensorEventAvro> consumerRecord, int count) {
-        consumer.trackOffset(consumerRecord.topic(), consumerRecord.partition(), consumerRecord.offset() + 1);
-        if (count % 10 == 0) {
-            consumer.commitAsyncCurrentOffsets();
-        }
     }
 }

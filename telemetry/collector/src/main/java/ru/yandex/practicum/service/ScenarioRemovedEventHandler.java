@@ -4,6 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.model.hub.HubEvent;
+import ru.yandex.practicum.model.hub.ScenarioRemovedEvent;
+
+import java.time.Instant;
 
 @Slf4j
 @Component
@@ -22,7 +26,7 @@ public class ScenarioRemovedEventHandler implements HubEventHandler {
         log.info("Processing scenario removed event for hub: {}", event.getHubId());
 
         var scenarioRemoved = event.getScenarioRemoved();
-        var hubEvent = new ru.yandex.practicum.model.hub.ScenarioRemovedEvent();
+        var hubEvent = new ScenarioRemovedEvent();
 
         setCommonHubFields(hubEvent, event);
         hubEvent.setName(scenarioRemoved.getName());
@@ -30,9 +34,9 @@ public class ScenarioRemovedEventHandler implements HubEventHandler {
         eventService.collectHubEvent(hubEvent);
     }
 
-    private void setCommonHubFields(ru.yandex.practicum.model.hub.HubEvent event, HubEventProto proto) {
+    private void setCommonHubFields(HubEvent event, HubEventProto proto) {
         event.setHubId(proto.getHubId());
-        event.setTimestamp(java.time.Instant.ofEpochSecond(
+        event.setTimestamp(Instant.ofEpochSecond(
                 proto.getTimestamp().getSeconds(),
                 proto.getTimestamp().getNanos()
         ));

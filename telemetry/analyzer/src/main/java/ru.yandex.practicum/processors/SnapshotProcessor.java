@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.kafka.KafkaConfigProperties;
 import ru.yandex.practicum.services.ScenarioAnalysisService;
@@ -37,15 +38,26 @@ public class SnapshotProcessor implements Runnable {
                         log.info("Received snapshot for hub: {}", record.key());
                         processSnapshot(record.value());
                     }
+
                     if (!records.isEmpty()) {
                         snapshotConsumer.commitSync();
                     }
+                } catch (WakeupException e) {
+                    log.info("Snapshot processor received wakeup signal, shutting down...");
+                    break;
                 } catch (Exception e) {
                     log.error("Error processing snapshot", e);
                 }
             }
         } catch (Exception e) {
             log.error("Error in snapshot processor", e);
+        } finally {
+            try {
+                snapshotConsumer.close();
+                log.info("Snapshot consumer closed successfully");
+            } catch (Exception e) {
+                log.warn("Error closing snapshot consumer", e);
+            }
         }
     }
 

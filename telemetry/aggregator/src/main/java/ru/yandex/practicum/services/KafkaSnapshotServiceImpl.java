@@ -52,7 +52,18 @@ public class KafkaSnapshotServiceImpl implements SnapshotService {
                 sensorsSnapshotAvro.getTimestamp().toEpochMilli(),
                 sensorsSnapshotAvro.getHubId(),
                 sensorsSnapshotAvro);
-        producer.send(rec);
+
+        producer.send(rec, (metadata, exception) -> {
+            if (exception != null) {
+                log.error("Failed to send sensor snapshot to Kafka for hub: {}",
+                        sensorsSnapshotAvro.getHubId(), exception);
+            } else {
+                log.debug("Successfully sent sensor snapshot to Kafka for hub: {}, partition: {}, offset: {}",
+                        sensorsSnapshotAvro.getHubId(), metadata.partition(), metadata.offset());
+            }
+        });
+
+        producer.flush();
     }
 
     @Override

@@ -4,7 +4,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.grpc.telemetry.event.ScenarioConditionProto;
+import ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto;
+import ru.yandex.practicum.grpc.telemetry.event.ConditionTypeProto;
+import ru.yandex.practicum.grpc.telemetry.event.ConditionOperationProto;
+import ru.yandex.practicum.grpc.telemetry.event.ActionTypeProto;
+import ru.yandex.practicum.model.hub.HubEvent;
+import ru.yandex.practicum.model.hub.ScenarioAddedEvent;
+import ru.yandex.practicum.model.hub.ScenarioCondition;
+import ru.yandex.practicum.model.hub.DeviceAction;
+import ru.yandex.practicum.model.hub.ConditionType;
+import ru.yandex.practicum.model.hub.ConditionOperation;
+import ru.yandex.practicum.model.hub.ActionType;
 
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,7 +37,7 @@ public class ScenarioAddedEventHandler implements HubEventHandler {
         log.info("Processing scenario added event for hub: {}", event.getHubId());
 
         var scenarioAdded = event.getScenarioAdded();
-        var hubEvent = new ru.yandex.practicum.model.hub.ScenarioAddedEvent();
+        var hubEvent = new ScenarioAddedEvent();
 
         setCommonHubFields(hubEvent, event);
         hubEvent.setName(scenarioAdded.getName());
@@ -42,17 +55,16 @@ public class ScenarioAddedEventHandler implements HubEventHandler {
         eventService.collectHubEvent(hubEvent);
     }
 
-    private void setCommonHubFields(ru.yandex.practicum.model.hub.HubEvent event, HubEventProto proto) {
+    private void setCommonHubFields(HubEvent event, HubEventProto proto) {
         event.setHubId(proto.getHubId());
-        event.setTimestamp(java.time.Instant.ofEpochSecond(
+        event.setTimestamp(Instant.ofEpochSecond(
                 proto.getTimestamp().getSeconds(),
                 proto.getTimestamp().getNanos()
         ));
     }
 
-    private ru.yandex.practicum.model.hub.ScenarioCondition toScenarioCondition(
-            ru.yandex.practicum.grpc.telemetry.event.ScenarioConditionProto proto) {
-        var condition = new ru.yandex.practicum.model.hub.ScenarioCondition();
+    private ScenarioCondition toScenarioCondition(ScenarioConditionProto proto) {
+        var condition = new ScenarioCondition();
         condition.setSensorId(proto.getSensorId());
         condition.setType(toConditionType(proto.getType()));
         condition.setOperation(toConditionOperation(proto.getOperation()));
@@ -67,9 +79,8 @@ public class ScenarioAddedEventHandler implements HubEventHandler {
         return condition;
     }
 
-    private ru.yandex.practicum.model.hub.DeviceAction toDeviceAction(
-            ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto proto) {
-        var action = new ru.yandex.practicum.model.hub.DeviceAction();
+    private DeviceAction toDeviceAction(DeviceActionProto proto) {
+        var action = new DeviceAction();
         action.setSensorId(proto.getSensorId());
         action.setType(toActionType(proto.getType()));
 
@@ -80,18 +91,15 @@ public class ScenarioAddedEventHandler implements HubEventHandler {
         return action;
     }
 
-    private ru.yandex.practicum.model.hub.ConditionType toConditionType(
-            ru.yandex.practicum.grpc.telemetry.event.ConditionTypeProto protoType) {
-        return ru.yandex.practicum.model.hub.ConditionType.valueOf(protoType.name());
+    private ConditionType toConditionType(ConditionTypeProto protoType) {
+        return ConditionType.valueOf(protoType.name());
     }
 
-    private ru.yandex.practicum.model.hub.ConditionOperation toConditionOperation(
-            ru.yandex.practicum.grpc.telemetry.event.ConditionOperationProto protoOp) {
-        return ru.yandex.practicum.model.hub.ConditionOperation.valueOf(protoOp.name());
+    private ConditionOperation toConditionOperation(ConditionOperationProto protoOp) {
+        return ConditionOperation.valueOf(protoOp.name());
     }
 
-    private ru.yandex.practicum.model.hub.ActionType toActionType(
-            ru.yandex.practicum.grpc.telemetry.event.ActionTypeProto protoType) {
-        return ru.yandex.practicum.model.hub.ActionType.valueOf(protoType.name());
+    private ActionType toActionType(ActionTypeProto protoType) {
+        return ActionType.valueOf(protoType.name());
     }
 }
