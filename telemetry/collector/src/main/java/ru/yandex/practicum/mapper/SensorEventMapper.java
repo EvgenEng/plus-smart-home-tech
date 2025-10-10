@@ -19,57 +19,55 @@ import ru.yandex.practicum.model.sensor.TemperatureSensorEvent;
 public class SensorEventMapper {
 
     public SensorEventAvro toSensorEventAvro(SensorEvent sensorEvent) {
-        return new SensorEventAvro(
-                sensorEvent.getId(),
-                sensorEvent.getHubId(),
-                sensorEvent.getTimestamp(),
-                toSensorEventPayloadAvro(sensorEvent)
-        );
+        return SensorEventAvro.newBuilder()
+                .setId(sensorEvent.getId())
+                .setHubId(sensorEvent.getHubId())
+                .setTimestamp(sensorEvent.getTimestamp())
+                .setPayload(toSensorEventPayloadAvro(sensorEvent))
+                .build();
     }
 
     public SpecificRecordBase toSensorEventPayloadAvro(SensorEvent sensorEvent) {
         switch (sensorEvent.getType()) {
             case CLIMATE_SENSOR_EVENT -> {
                 ClimateSensorEvent event = (ClimateSensorEvent) sensorEvent;
-                return new ClimateSensorAvro(
-                        event.getTemperatureC(),
-                        event.getHumidity(),
-                        event.getCo2Level()
-                );
+                return ClimateSensorAvro.newBuilder()
+                        .setTemperatureC(event.getTemperatureC())
+                        .setHumidity(event.getHumidity())
+                        .setCo2Level(event.getCo2Level())
+                        .build();
             }
 
             case LIGHT_SENSOR_EVENT -> {
                 LightSensorEvent event = (LightSensorEvent) sensorEvent;
-                return new LightSensorAvro(
-                        event.getLinkQuality(),
-                        event.getLuminosity()
-                );
+                return LightSensorAvro.newBuilder()
+                        .setLinkQuality(event.getLinkQuality())
+                        .setLuminosity(event.getLuminosity())
+                        .build();
             }
 
             case MOTION_SENSOR_EVENT -> {
                 MotionSensorEvent event = (MotionSensorEvent) sensorEvent;
-                return new MotionSensorAvro(
-                        event.getLinkQuality(),
-                        event.getMotion(),
-                        event.getVoltage()
-                );
+                return MotionSensorAvro.newBuilder()
+                        .setLinkQuality(event.getLinkQuality())
+                        .setMotion(event.getMotion())
+                        .setVoltage(event.getVoltage())
+                        .build();
             }
 
             case SWITCH_SENSOR_EVENT -> {
                 SwitchSensorEvent event = (SwitchSensorEvent) sensorEvent;
-                return new SwitchSensorAvro(
-                        event.getState()
-                );
+                return SwitchSensorAvro.newBuilder()
+                        .setState(event.getState())
+                        .build();
             }
 
             case TEMPERATURE_SENSOR_EVENT -> {
                 TemperatureSensorEvent event = (TemperatureSensorEvent) sensorEvent;
-                return new TemperatureSensorAvro(
-                        event.getId(), event.getHubId(),
-                        event.getTimestamp(),
-                        event.getTemperatureC(),
-                        event.getTemperatureF()
-                );
+                return TemperatureSensorAvro.newBuilder()
+                        .setTemperatureC(event.getTemperatureC())
+                        .setTemperatureF(event.getTemperatureF())
+                        .build();
             }
 
             default -> throw new IllegalStateException("Invalid payload");

@@ -42,10 +42,9 @@
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-
+                <version>2.4.0</version>
                 <configuration>
                     <protocVersion>${protobuf.version}</protocVersion>
-
                     <binaryMavenPlugins>
                         <binaryMavenPlugin>
                             <groupId>io.grpc</groupId>
@@ -54,7 +53,6 @@
                         </binaryMavenPlugin>
                     </binaryMavenPlugins>
                 </configuration>
-
                 <executions>
                     <execution>
                         <goals>
