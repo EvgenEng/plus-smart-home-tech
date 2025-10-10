@@ -1,12 +1,8 @@
 package ru.yandex.practicum.kafka;
 
 import lombok.Getter;
-import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,16 +19,6 @@ public class KafkaConfig {
     public KafkaConfig(KafkaConfigProperties properties) {
         this.kafkaProperties = properties;
     }
-
-    /*@Bean
-    public Producer<String, SpecificRecordBase> producer() {
-        Properties properties = new Properties();
-        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
-        properties.put(ProducerConfig.CLIENT_ID_CONFIG, kafkaProperties.getProducerClientIdConfig());
-        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducerKeySerializer());
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducerValueSerializer());
-        return new KafkaProducer<>(properties);
-    }*/
 
     @Bean
     public KafkaConsumer<String, SensorEventAvro> getKafkaConsumer() {
