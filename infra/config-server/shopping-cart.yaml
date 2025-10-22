@@ -3,3 +3,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/shopping_cart_db
     username: user
     password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
