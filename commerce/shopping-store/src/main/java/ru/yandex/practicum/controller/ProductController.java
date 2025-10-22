@@ -25,6 +25,8 @@ import ru.yandex.practicum.mapper.ProductMapper;
 import ru.yandex.practicum.model.Product;
 import ru.yandex.practicum.service.ProductService;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -35,7 +37,7 @@ public class ProductController {
     private final ProductMapper productMapper;
 
     @GetMapping
-    public Page<ProductDto> getProducts(
+    public Map<String, Object> getProducts(
             @RequestParam ProductCategory category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -48,22 +50,24 @@ public class ProductController {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
 
-        Page<ProductDto> result = productService.getProductsByCategory(category, pageable)
+        Page<ProductDto> resultPage = productService.getProductsByCategory(category, pageable)
                 .map(productMapper::toDto);
-        
-        System.out.println("=== FORCING PAGE FIELDS ===");
-        System.out.println("Page number: " + result.getNumber());
-        System.out.println("Page size: " + result.getSize());
-        System.out.println("Total elements: " + result.getTotalElements());
-        System.out.println("Total pages: " + result.getTotalPages());
-        System.out.println("First: " + result.isFirst());
-        System.out.println("Last: " + result.isLast());
-        System.out.println("Has next: " + result.hasNext());
-        System.out.println("Has previous: " + result.hasPrevious());
-        System.out.println("Sort: " + result.getSort());
-        System.out.println("=== END FORCING ===");
 
-        return result;
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", resultPage.getContent());
+        response.put("totalElements", resultPage.getTotalElements());
+        response.put("totalPages", resultPage.getTotalPages());
+        response.put("size", resultPage.getSize());
+        response.put("number", resultPage.getNumber());
+        response.put("sort", resultPage.getSort());
+        response.put("first", resultPage.isFirst());
+        response.put("last", resultPage.isLast());
+        response.put("numberOfElements", resultPage.getNumberOfElements());
+        response.put("empty", resultPage.isEmpty());
+
+        response.put("pageable", resultPage.getPageable());
+
+        return response;
     }
 
     @PutMapping
