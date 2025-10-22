@@ -56,6 +56,11 @@ public class ProductService {
         return true;
     }
 
+    public Product getProduct(UUID productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+    }
+
     public Product getActiveProduct(UUID productId) {
         return productRepository.findByProductIdAndProductState(productId, ProductState.ACTIVE)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));

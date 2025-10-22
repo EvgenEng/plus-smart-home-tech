@@ -58,18 +58,20 @@ public class ProductController {
     }
 
     @PostMapping("/removeProductFromStore")
+    @ResponseStatus(HttpStatus.OK)
     public Boolean removeProductFromStore(@RequestBody UUID productId) {
         return productService.deactivateProduct(productId);
     }
 
     @PostMapping("/quantityState")
+    @ResponseStatus(HttpStatus.OK)
     public Boolean setProductQuantityState(@Valid @RequestBody SetProductQuantityStateRequest request) {
         return productService.updateQuantityState(request.getProductId(), request.getQuantityState());
     }
 
     @GetMapping("/{productId}")
     public ProductDto getProduct(@PathVariable UUID productId) {
-        Product product = productService.getActiveProduct(productId);
+        Product product = productService.getProduct(productId);
         return productMapper.toDto(product);
     }
 
