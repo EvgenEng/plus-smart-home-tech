@@ -63,13 +63,14 @@ public class ProductController {
         response.put("last", resultPage.isLast());
         response.put("numberOfElements", resultPage.getNumberOfElements());
         response.put("empty", resultPage.isEmpty());
-        response.put("pageable", resultPage.getPageable());
 
         List<Map<String, String>> sortArray = new ArrayList<>();
-        Map<String, String> sortObject = new HashMap<>();
-        sortObject.put("property", sortField);
-        sortObject.put("direction", direction.name());
-        sortArray.add(sortObject);
+        for (Sort.Order order : resultPage.getSort()) {
+            Map<String, String> sortObj = new HashMap<>();
+            sortObj.put("property", order.getProperty());
+            sortObj.put("direction", order.getDirection().name());
+            sortArray.add(sortObj);
+        }
         response.put("sort", sortArray);
 
         return response;
