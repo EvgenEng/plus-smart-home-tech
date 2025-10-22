@@ -25,9 +25,7 @@ import ru.yandex.practicum.mapper.ProductMapper;
 import ru.yandex.practicum.model.Product;
 import ru.yandex.practicum.service.ProductService;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/shopping-store")
@@ -61,29 +59,18 @@ public class ProductController {
         response.put("totalPages", resultPage.getTotalPages());
         response.put("size", resultPage.getSize());
         response.put("number", resultPage.getNumber());
-        response.put("sort", resultPage.getSort());
         response.put("first", resultPage.isFirst());
         response.put("last", resultPage.isLast());
         response.put("numberOfElements", resultPage.getNumberOfElements());
         response.put("empty", resultPage.isEmpty());
         response.put("pageable", resultPage.getPageable());
 
-        response.put("total", resultPage.getTotalElements());
-        response.put("page", resultPage.getNumber());
-        response.put("currentPage", resultPage.getNumber());
-        response.put("pageSize", resultPage.getSize());
-        response.put("hasNext", resultPage.hasNext());
-        response.put("hasPrevious", resultPage.hasPrevious());
-        response.put("hasContent", resultPage.hasContent());
-
-        Map<String, Object> pageableMap = new HashMap<>();
-        pageableMap.put("pageNumber", resultPage.getPageable().getPageNumber());
-        pageableMap.put("pageSize", resultPage.getPageable().getPageSize());
-        pageableMap.put("sort", resultPage.getPageable().getSort());
-        pageableMap.put("offset", resultPage.getPageable().getOffset());
-        pageableMap.put("paged", resultPage.getPageable().isPaged());
-        pageableMap.put("unpaged", resultPage.getPageable().isUnpaged());
-        response.put("pageable", pageableMap);
+        List<Map<String, String>> sortArray = new ArrayList<>();
+        Map<String, String> sortObject = new HashMap<>();
+        sortObject.put("property", sortField);
+        sortObject.put("direction", direction.name());
+        sortArray.add(sortObject);
+        response.put("sort", sortArray);
 
         return response;
     }
