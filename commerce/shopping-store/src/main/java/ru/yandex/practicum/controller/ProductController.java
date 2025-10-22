@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import ru.yandex.practicum.dto.ProductCategory;
-import ru.yandex.practicum.dto.ProductDto;
-import ru.yandex.practicum.dto.ProductNotFoundException;
-import ru.yandex.practicum.dto.SetProductQuantityStateRequest;
+import ru.yandex.practicum.dto.*;
 import ru.yandex.practicum.mapper.ProductMapper;
 import ru.yandex.practicum.model.Product;
 import ru.yandex.practicum.service.ProductService;
@@ -65,8 +62,10 @@ public class ProductController {
 
     @PostMapping("/quantityState")
     @ResponseStatus(HttpStatus.OK)
-    public Boolean setProductQuantityState(@Valid @RequestBody SetProductQuantityStateRequest request) {
-        return productService.updateQuantityState(request.getProductId(), request.getQuantityState());
+    public Boolean setProductQuantityState(
+            @RequestParam UUID productId,
+            @RequestParam QuantityState quantityState) {
+        return productService.updateQuantityState(productId, quantityState);
     }
 
     @GetMapping("/{productId}")

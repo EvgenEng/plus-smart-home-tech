@@ -26,7 +26,6 @@ public class ProductService {
 
     @Transactional
     public Product createProduct(Product product) {
-        product.setProductState(ProductState.ACTIVE);
         return productRepository.save(product);
     }
 
