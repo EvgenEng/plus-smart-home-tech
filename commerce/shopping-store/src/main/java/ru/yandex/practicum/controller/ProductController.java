@@ -48,8 +48,39 @@ public class ProductController {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
 
-        return productService.getProductsByCategory(category, pageable)
+        Page<ProductDto> result = productService.getProductsByCategory(category, pageable)
                 .map(productMapper::toDto);
+
+        System.out.println("=== GET PRODUCTS DEBUG ===");
+        System.out.println("Request params: category=" + category + ", page=" + page + ", size=" + size + ", sort=" + sort);
+        System.out.println("Result: totalElements=" + result.getTotalElements() + ", numberOfElements=" + result.getNumberOfElements());
+
+        if (!result.getContent().isEmpty()) {
+            ProductDto first = result.getContent().get(0);
+            System.out.println("First product details:");
+            System.out.println("  productId: " + first.getProductId());
+            System.out.println("  productName: " + first.getProductName());
+            System.out.println("  description: " + first.getDescription());
+            System.out.println("  imageSrc: " + first.getImageSrc());
+            System.out.println("  quantityState: " + first.getQuantityState());
+            System.out.println("  productState: " + first.getProductState());
+            System.out.println("  productCategory: " + first.getProductCategory());
+            System.out.println("  price: " + first.getPrice());
+
+            if (first.getProductId() == null) System.out.println("  ⚠️ productId is NULL");
+            if (first.getProductName() == null) System.out.println("  ⚠️ productName is NULL");
+            if (first.getDescription() == null) System.out.println("  ⚠️ description is NULL");
+            if (first.getImageSrc() == null) System.out.println("  ⚠️ imageSrc is NULL");
+            if (first.getQuantityState() == null) System.out.println("  ⚠️ quantityState is NULL");
+            if (first.getProductState() == null) System.out.println("  ⚠️ productState is NULL");
+            if (first.getProductCategory() == null) System.out.println("  ⚠️ productCategory is NULL");
+            if (first.getPrice() == null) System.out.println("  ⚠️ price is NULL");
+        } else {
+            System.out.println("No products found in result");
+        }
+        System.out.println("=== END DEBUG ===");
+
+        return result;
     }
 
     @PutMapping
