@@ -28,7 +28,7 @@ public class WarehouseController {
     private final WarehouseService warehouseService;
 
     @PutMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ResponseStatus(HttpStatus.CREATED)
     public void newProductInWarehouse(@Valid @RequestBody NewProductInWarehouseRequest request) {
         warehouseService.addNewProduct(request);
     }
@@ -39,7 +39,7 @@ public class WarehouseController {
     }
 
     @PostMapping("/add")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ResponseStatus(HttpStatus.OK)
     public void addProductToWarehouse(@Valid @RequestBody AddProductToWarehouseRequest request) {
         warehouseService.addProductQuantity(request);
     }
