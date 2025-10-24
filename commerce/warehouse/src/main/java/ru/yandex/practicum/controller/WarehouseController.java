@@ -58,6 +58,8 @@ public class WarehouseController implements WarehouseClient {
     @ResponseStatus(HttpStatus.OK)
     public void checkProductQuantityEnoughForShoppingCart(@RequestBody Map<UUID, Long> productList) {
         ShoppingCartDto shoppingCartDto = new ShoppingCartDto();
+        shoppingCartDto.setShoppingCartId(UUID.randomUUID());
+
         Map<UUID, Integer> products = new HashMap<>();
         productList.forEach((key, value) -> products.put(key, value.intValue()));
         shoppingCartDto.setProducts(products);
