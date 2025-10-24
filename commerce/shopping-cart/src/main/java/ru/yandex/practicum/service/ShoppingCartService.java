@@ -3,8 +3,11 @@ package ru.yandex.practicum.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.yandex.practicum.client.WarehouseClient;
+import ru.yandex.practicum.dto.ChangeProductQuantityRequest;
+import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.exception.NoProductsInShoppingCartException;
-import ru.yandex.practicum.exception.NotAuthorizedUserException;
+import ru.yandex.practicum.mapper.ShoppingCartMapper;
 import ru.yandex.practicum.model.ShoppingCart;
 import ru.yandex.practicum.repository.ShoppingCartRepository;
 
@@ -17,16 +20,51 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ShoppingCartService {
     private final ShoppingCartRepository shoppingCartRepository;
+    private final ShoppingCartMapper shoppingCartMapper;
+    private final WarehouseClient warehouseClient;
+
+    public ShoppingCartDto getShoppingCart(String username) {
+        ShoppingCart cart = getOrCreateShoppingCart(username);
+        return shoppingCartMapper.toDto(cart);
+    }
+
+    @Transactional
+    public ShoppingCartDto addProductToShoppingCart(String username, Map<UUID, Integer> productList) {
+        Map<UUID, Long> productListLong = convertToLongMap(productList);
+
+        warehouseClient.checkProductQuantityEnoughForShoppingCart(productListLong);
+
+        ShoppingCart cart = addProductsToCart(username, productList);
+        return shoppingCartMapper.toDto(cart);
+    }
+
+    @Transactional
+    public void deactivateCurrentShoppingCart(String username) {
+        deactivateShoppingCart(username);
+    }
+
+    @Transactional
+    public ShoppingCartDto removeFromShoppingCart(String username, List<UUID> productIds) {
+        ShoppingCart cart = removeProductsFromCart(username, productIds);
+        return shoppingCartMapper.toDto(cart);
+    }
+
+    @Transactional
+    public ShoppingCartDto changeProductQuantity(String username, ChangeProductQuantityRequest request) {
+        Map<UUID, Long> productQuantity = Map.of(request.getProductId(), request.getNewQuantity().longValue());
+        warehouseClient.checkProductQuantityEnoughForShoppingCart(productQuantity);
+
+        ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity());
+        return shoppingCartMapper.toDto(cart);
+    }
 
     public ShoppingCart getOrCreateShoppingCart(String username) {
-        validateUsername(username);
         return shoppingCartRepository.findByUsernameAndActiveTrue(username)
                 .orElseGet(() -> createNewShoppingCart(username));
     }
 
     @Transactional
     public ShoppingCart addProductsToCart(String username, Map<UUID, Integer> products) {
-        validateUsername(username);
         ShoppingCart cart = getOrCreateShoppingCart(username);
 
         products.forEach((productId, quantity) -> {
@@ -38,7 +76,6 @@ public class ShoppingCartService {
 
     @Transactional
     public ShoppingCart removeProductsFromCart(String username, List<UUID> productIds) {
-        validateUsername(username);
         ShoppingCart cart = getOrCreateShoppingCart(username);
 
         boolean removed = productIds.stream()
@@ -52,8 +89,7 @@ public class ShoppingCartService {
     }
 
     @Transactional
-    public ShoppingCart changeProductQuantity(String username, UUID productId, Integer newQuantity) {
-        validateUsername(username);
+    public ShoppingCart changeProductQuantityInternal(String username, UUID productId, Integer newQuantity) {
         ShoppingCart cart = getOrCreateShoppingCart(username);
 
         if (!cart.getProducts().containsKey(productId)) {
@@ -66,7 +102,6 @@ public class ShoppingCartService {
 
     @Transactional
     public void deactivateShoppingCart(String username) {
-        validateUsername(username);
         ShoppingCart cart = shoppingCartRepository.findByUsernameAndActiveTrue(username)
                 .orElseThrow(() -> new NoProductsInShoppingCartException("Cart not found"));
 
@@ -83,9 +118,9 @@ public class ShoppingCartService {
         return shoppingCartRepository.save(newCart);
     }
 
-    private void validateUsername(String username) {
-        if (username == null || username.trim().isEmpty()) {
-            throw new NotAuthorizedUserException("Username is required");
-        }
+    private Map<UUID, Long> convertToLongMap(Map<UUID, Integer> intMap) {
+        Map<UUID, Long> longMap = new java.util.HashMap<>();
+        intMap.forEach((key, value) -> longMap.put(key, value.longValue()));
+        return longMap;
     }
 }

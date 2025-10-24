@@ -7,7 +7,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,23 +16,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.yandex.practicum.client.ShoppingStoreClient;
 import ru.yandex.practicum.dto.ProductCategory;
 import ru.yandex.practicum.dto.ProductDto;
-import ru.yandex.practicum.dto.ProductNotFoundException;
 import ru.yandex.practicum.dto.QuantityState;
 import ru.yandex.practicum.mapper.ProductMapper;
+import ru.yandex.practicum.mapper.ProductPageMapper;
 import ru.yandex.practicum.model.Product;
 import ru.yandex.practicum.service.ProductService;
 
-import java.util.*;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/shopping-store")
 @RequiredArgsConstructor
-public class ProductController {
+public class ProductController implements ShoppingStoreClient {
     private final ProductService productService;
     private final ProductMapper productMapper;
+    private final ProductPageMapper productPageMapper;
 
+    @Override
     @GetMapping
     public Map<String, Object> getProducts(
             @RequestParam ProductCategory category,
@@ -51,31 +54,10 @@ public class ProductController {
         Page<ProductDto> resultPage = productService.getProductsByCategory(category, pageable)
                 .map(productMapper::toDto);
 
-        Map<String, Object> response = new HashMap<>();
-
-        response.put("content", resultPage.getContent());
-
-        response.put("totalElements", resultPage.getTotalElements());
-        response.put("totalPages", resultPage.getTotalPages());
-        response.put("size", resultPage.getSize());
-        response.put("number", resultPage.getNumber());
-        response.put("first", resultPage.isFirst());
-        response.put("last", resultPage.isLast());
-        response.put("numberOfElements", resultPage.getNumberOfElements());
-        response.put("empty", resultPage.isEmpty());
-
-        List<Map<String, String>> sortArray = new ArrayList<>();
-        for (Sort.Order order : resultPage.getSort()) {
-            Map<String, String> sortObj = new HashMap<>();
-            sortObj.put("property", order.getProperty());
-            sortObj.put("direction", order.getDirection().name());
-            sortArray.add(sortObj);
-        }
-        response.put("sort", sortArray);
-
-        return response;
+        return productPageMapper.toResponseMap(resultPage);
     }
 
+    @Override
     @PutMapping
     public ProductDto createNewProduct(@Valid @RequestBody ProductDto productDto) {
         Product product = productMapper.toEntity(productDto);
@@ -83,6 +65,7 @@ public class ProductController {
         return productMapper.toDto(savedProduct);
     }
 
+    @Override
     @PostMapping
     public ProductDto updateProduct(@Valid @RequestBody ProductDto productDto) {
         Product product = productMapper.toEntity(productDto);
@@ -90,12 +73,14 @@ public class ProductController {
         return productMapper.toDto(updatedProduct);
     }
 
+    @Override
     @PostMapping("/removeProductFromStore")
     @ResponseStatus(HttpStatus.OK)
     public Boolean removeProductFromStore(@RequestBody UUID productId) {
         return productService.deactivateProduct(productId);
     }
 
+    @Override
     @PostMapping("/quantityState")
     @ResponseStatus(HttpStatus.OK)
     public Boolean setProductQuantityState(
@@ -104,15 +89,10 @@ public class ProductController {
         return productService.updateQuantityState(productId, quantityState);
     }
 
+    @Override
     @GetMapping("/{productId}")
     public ProductDto getProduct(@PathVariable UUID productId) {
         Product product = productService.getProduct(productId);
         return productMapper.toDto(product);
-    }
-
-    @ExceptionHandler(ProductNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ProductNotFoundException handleProductNotFound(ProductNotFoundException ex) {
-        return ex;
     }
 }

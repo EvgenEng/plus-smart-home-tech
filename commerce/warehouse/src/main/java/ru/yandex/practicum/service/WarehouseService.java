@@ -3,22 +3,29 @@ package ru.yandex.practicum.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.yandex.practicum.dto.*;
+import ru.yandex.practicum.dto.AddProductToWarehouseRequest;
+import ru.yandex.practicum.dto.AddressDto;
+import ru.yandex.practicum.dto.BookedProductsDto;
+import ru.yandex.practicum.dto.NewProductInWarehouseRequest;
+import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.exception.SpecifiedProductAlreadyInWarehouseException;
 import ru.yandex.practicum.exception.NoSpecifiedProductInWarehouseException;
 import ru.yandex.practicum.exception.ProductInShoppingCartLowQuantityInWarehouse;
+import ru.yandex.practicum.mapper.WarehouseProductMapper;
 import ru.yandex.practicum.model.WarehouseProduct;
 import ru.yandex.practicum.repository.WarehouseProductRepository;
 
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class WarehouseService {
     private final WarehouseProductRepository warehouseProductRepository;
+    private final WarehouseProductMapper warehouseProductMapper;
 
     private static final String[] ADDRESSES = new String[]{"ADDRESS_1", "ADDRESS_2"};
     private static final String CURRENT_ADDRESS = ADDRESSES[new SecureRandom().nextInt(ADDRESSES.length)];
@@ -29,16 +36,7 @@ public class WarehouseService {
             throw new SpecifiedProductAlreadyInWarehouseException("Product already in warehouse");
         }
 
-        WarehouseProduct product = WarehouseProduct.builder()
-                .productId(request.getProductId())
-                .quantity(0)
-                .fragile(request.getFragile() != null ? request.getFragile() : false)
-                .width(request.getDimension().getWidth())
-                .height(request.getDimension().getHeight())
-                .depth(request.getDimension().getDepth())
-                .weight(request.getWeight())
-                .build();
-
+        WarehouseProduct product = warehouseProductMapper.toWarehouseProduct(request);
         warehouseProductRepository.save(product);
     }
 
@@ -52,36 +50,48 @@ public class WarehouseService {
     }
 
     public BookedProductsDto checkProductQuantity(ShoppingCartDto shoppingCart) {
-        Double totalWeight = 0.0;
-        Double totalVolume = 0.0;
-        Boolean hasFragile = false;
+        AtomicBoolean hasFragile = new AtomicBoolean(false);
 
-        for (Map.Entry<UUID, Integer> entry : shoppingCart.getProducts().entrySet()) {
-            UUID productId = entry.getKey();
-            Integer requestedQuantity = entry.getValue();
+        Map<UUID, Integer> productsSummary = shoppingCart.getProducts().entrySet().stream()
+                .peek(entry -> {
+                    UUID productId = entry.getKey();
+                    Integer requestedQuantity = entry.getValue();
 
-            WarehouseProduct warehouseProduct = warehouseProductRepository.findByProductId(productId)
-                    .orElseThrow(() -> new NoSpecifiedProductInWarehouseException("Product not found in warehouse"));
+                    WarehouseProduct warehouseProduct = warehouseProductRepository.findByProductId(productId)
+                            .orElseThrow(() -> new NoSpecifiedProductInWarehouseException("Product not found in warehouse"));
 
-            if (warehouseProduct.getQuantity() < requestedQuantity) {
-                throw new ProductInShoppingCartLowQuantityInWarehouse("Not enough quantity in warehouse");
-            }
+                    if (warehouseProduct.getQuantity() < requestedQuantity) {
+                        throw new ProductInShoppingCartLowQuantityInWarehouse("Not enough quantity in warehouse");
+                    }
 
-            Double productWeight = warehouseProduct.getWeight() != null ? warehouseProduct.getWeight() : 1.0;
-            Double productVolume = warehouseProduct.getWidth() * warehouseProduct.getHeight() * warehouseProduct.getDepth();
+                    if (warehouseProduct.getFragile() != null && warehouseProduct.getFragile()) {
+                        hasFragile.set(true);
+                    }
+                })
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            totalWeight += productWeight * requestedQuantity;
-            totalVolume += productVolume * requestedQuantity;
+        double totalWeight = productsSummary.entrySet().stream()
+                .mapToDouble(entry -> {
+                    WarehouseProduct product = warehouseProductRepository.findByProductId(entry.getKey())
+                            .orElseThrow(() -> new NoSpecifiedProductInWarehouseException("Product not found in warehouse"));
+                    Double productWeight = product.getWeight() != null ? product.getWeight() : 1.0;
+                    return productWeight * entry.getValue();
+                })
+                .sum();
 
-            if (warehouseProduct.getFragile() != null && warehouseProduct.getFragile()) {
-                hasFragile = true;
-            }
-        }
+        double totalVolume = productsSummary.entrySet().stream()
+                .mapToDouble(entry -> {
+                    WarehouseProduct product = warehouseProductRepository.findByProductId(entry.getKey())
+                            .orElseThrow(() -> new NoSpecifiedProductInWarehouseException("Product not found in warehouse"));
+                    Double productVolume = product.getWidth() * product.getHeight() * product.getDepth();
+                    return productVolume * entry.getValue();
+                })
+                .sum();
 
-        return new BookedProductsDto(totalWeight, totalVolume, hasFragile);
+        return new BookedProductsDto(totalWeight, totalVolume, hasFragile.get());
     }
 
     public AddressDto getWarehouseAddress() {
-        return new AddressDto("Россия", "Москва", "Ленинградский проспект", "80", "1");
+        return new AddressDto(CURRENT_ADDRESS, CURRENT_ADDRESS, CURRENT_ADDRESS, CURRENT_ADDRESS, CURRENT_ADDRESS);
     }
 }
