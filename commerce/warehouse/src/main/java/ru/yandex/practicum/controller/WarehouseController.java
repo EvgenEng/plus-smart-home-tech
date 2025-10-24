@@ -18,6 +18,7 @@ import ru.yandex.practicum.dto.NewProductInWarehouseRequest;
 import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.service.WarehouseService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -53,12 +54,11 @@ public class WarehouseController implements WarehouseClient {
         return warehouseService.checkProductQuantity(shoppingCart);
     }
 
-    @Override
     @PostMapping("/check-quantity")
     @ResponseStatus(HttpStatus.OK)
     public void checkProductQuantityEnoughForShoppingCart(@RequestBody Map<UUID, Long> productList) {
         ShoppingCartDto shoppingCartDto = new ShoppingCartDto();
-        Map<UUID, Integer> products = new java.util.HashMap<>();
+        Map<UUID, Integer> products = new HashMap<>();
         productList.forEach((key, value) -> products.put(key, value.intValue()));
         shoppingCartDto.setProducts(products);
 
