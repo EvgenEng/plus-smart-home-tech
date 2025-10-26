@@ -13,7 +13,6 @@ import ru.yandex.practicum.exception.WarehouseServiceUnavailableException;
 import ru.yandex.practicum.mapper.ShoppingCartMapper;
 import ru.yandex.practicum.model.ShoppingCart;
 import ru.yandex.practicum.repository.ShoppingCartRepository;
-import feign.FeignException;
 
 import java.util.List;
 import java.util.Map;
@@ -29,8 +28,15 @@ public class ShoppingCartService {
     private final WarehouseClient warehouseClient;
 
     public ShoppingCartDto getShoppingCart(String username) {
-        ShoppingCart cart = getOrCreateShoppingCart(username);
-        return shoppingCartMapper.toDto(cart);
+        try {
+            ShoppingCart cart = getOrCreateShoppingCart(username);
+            ShoppingCartDto dto = shoppingCartMapper.toDto(cart);
+            log.info("Retrieved shopping cart for user: {}, cart: {}", username, dto);
+            return dto;
+        } catch (Exception e) {
+            log.error("Error getting shopping cart for user: {}", username, e);
+            throw new RuntimeException("Failed to get shopping cart: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -38,31 +44,49 @@ public class ShoppingCartService {
         log.info("Adding products to cart for user: {}, products: {}", username, productList);
 
         try {
-            warehouseClient.checkProductQuantityEnoughForShoppingCart(productList);
-        } catch (FeignException.NotFound e) {
-            log.warn("Product not found in warehouse: {}", e.getMessage());
-            throw new ProductInShoppingCartLowQuantityInWarehouse("One or more products not available in warehouse");
-        } catch (FeignException e) {
-            log.error("Warehouse service error: {}", e.getMessage());
-            throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
-        } catch (Exception e) {
-            log.error("Unexpected error during warehouse check: {}", e.getMessage());
-            throw new WarehouseServiceUnavailableException("Warehouse service error");
-        }
+            validateProductsAvailability(productList);
 
-        ShoppingCart cart = addProductsToCart(username, productList);
-        return shoppingCartMapper.toDto(cart);
+            ShoppingCart cart = addProductsToCart(username, productList);
+            ShoppingCartDto dto = shoppingCartMapper.toDto(cart);
+            log.info("Successfully added products to cart for user: {}", username);
+            return dto;
+        } catch (ProductInShoppingCartLowQuantityInWarehouse | WarehouseServiceUnavailableException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error adding products to cart for user: {}", username, e);
+            throw new RuntimeException("Failed to add products to cart: " + e.getMessage());
+        }
     }
 
     @Transactional
     public void deactivateCurrentShoppingCart(String username) {
-        deactivateShoppingCart(username);
+        try {
+            log.info("Deactivating shopping cart for user: {}", username);
+            deactivateShoppingCart(username);
+            log.info("Successfully deactivated shopping cart for user: {}", username);
+        } catch (NoProductsInShoppingCartException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error deactivating shopping cart for user: {}", username, e);
+            throw new RuntimeException("Failed to deactivate shopping cart: " + e.getMessage());
+        }
     }
 
     @Transactional
     public ShoppingCartDto removeFromShoppingCart(String username, List<UUID> productIds) {
-        ShoppingCart cart = removeProductsFromCart(username, productIds);
-        return shoppingCartMapper.toDto(cart);
+        try {
+            log.info("Removing products from cart for user: {}, productIds: {}", username, productIds);
+
+            ShoppingCart cart = removeProductsFromCart(username, productIds);
+            ShoppingCartDto dto = shoppingCartMapper.toDto(cart);
+            log.info("Successfully removed products from cart for user: {}", username);
+            return dto;
+        } catch (NoProductsInShoppingCartException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error removing products from cart for user: {}", username, e);
+            throw new RuntimeException("Failed to remove products from cart: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -71,21 +95,40 @@ public class ShoppingCartService {
                 username, request.getProductId(), request.getNewQuantity());
 
         try {
-            Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity());
-            warehouseClient.checkProductQuantityEnoughForShoppingCart(productQuantity);
-        } catch (FeignException.NotFound e) {
-            log.warn("Product not found in warehouse: {}", e.getMessage());
-            throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available in warehouse");
-        } catch (FeignException e) {
-            log.error("Warehouse service error: {}", e.getMessage());
-            throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
-        } catch (Exception e) {
-            log.error("Unexpected error during warehouse check: {}", e.getMessage());
-            throw new WarehouseServiceUnavailableException("Warehouse service error");
-        }
+            if (request.getNewQuantity() > 0) {
+                Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity());
+                validateProductsAvailability(productQuantity);
+            }
 
-        ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity());
-        return shoppingCartMapper.toDto(cart);
+            ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity());
+            ShoppingCartDto dto = shoppingCartMapper.toDto(cart);
+            log.info("Successfully changed product quantity for user: {}", username);
+            return dto;
+        } catch (ProductInShoppingCartLowQuantityInWarehouse | WarehouseServiceUnavailableException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error changing product quantity for user: {}", username, e);
+            throw new RuntimeException("Failed to change product quantity: " + e.getMessage());
+        }
+    }
+
+    private void validateProductsAvailability(Map<UUID, Integer> productList) {
+        try {
+            log.debug("Checking product availability in warehouse: {}", productList);
+            warehouseClient.checkProductQuantityEnoughForShoppingCart(productList);
+            log.info("Products availability check passed for: {}", productList.keySet());
+        } catch (Exception e) {
+            log.warn("Product availability check failed: {}", e.getMessage());
+
+            if (e.getMessage() != null && e.getMessage().contains("not found") ||
+                    e.getMessage().contains("Not enough quantity")) {
+                throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available or insufficient quantity in warehouse");
+            } else if (e.getMessage() != null && e.getMessage().contains("unavailable")) {
+                throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
+            } else {
+                throw new WarehouseServiceUnavailableException("Warehouse service error: " + e.getMessage());
+            }
+        }
     }
 
     public ShoppingCart getOrCreateShoppingCart(String username) {
@@ -102,7 +145,9 @@ public class ShoppingCartService {
         }
 
         products.forEach((productId, quantity) -> {
-            cart.getProducts().merge(productId, quantity, Integer::sum);
+            if (quantity > 0) {
+                cart.getProducts().merge(productId, quantity, Integer::sum);
+            }
         });
 
         return shoppingCartRepository.save(cart);
@@ -134,7 +179,12 @@ public class ShoppingCartService {
             throw new NoProductsInShoppingCartException("Product not found in cart");
         }
 
-        cart.getProducts().put(productId, newQuantity);
+        if (newQuantity == 0) {
+            cart.getProducts().remove(productId);
+        } else {
+            cart.getProducts().put(productId, newQuantity);
+        }
+
         return shoppingCartRepository.save(cart);
     }
 

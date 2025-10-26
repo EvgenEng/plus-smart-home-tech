@@ -1,6 +1,7 @@
 package ru.yandex.practicum.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.dto.AddProductToWarehouseRequest;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class WarehouseService {
     private final WarehouseProductRepository warehouseProductRepository;
     private final WarehouseProductMapper warehouseProductMapper;
@@ -50,6 +52,14 @@ public class WarehouseService {
     }
 
     public BookedProductsDto checkProductQuantity(ShoppingCartDto shoppingCart) {
+        log.info("Checking product quantity for shopping cart: {}", shoppingCart);
+
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: проверяем на null
+        if (shoppingCart == null || shoppingCart.getProducts() == null || shoppingCart.getProducts().isEmpty()) {
+            log.info("Empty shopping cart received");
+            return new BookedProductsDto(0.0, 0.0, false);
+        }
+
         AtomicBoolean hasFragile = new AtomicBoolean(false);
 
         Map<UUID, Integer> productsSummary = shoppingCart.getProducts().entrySet().stream()
@@ -58,10 +68,13 @@ public class WarehouseService {
                     Integer requestedQuantity = entry.getValue();
 
                     WarehouseProduct warehouseProduct = warehouseProductRepository.findByProductId(productId)
-                            .orElseThrow(() -> new NoSpecifiedProductInWarehouseException("Product not found in warehouse"));
+                            .orElseThrow(() -> new NoSpecifiedProductInWarehouseException("Product not found in warehouse: " + productId));
 
                     if (warehouseProduct.getQuantity() < requestedQuantity) {
-                        throw new ProductInShoppingCartLowQuantityInWarehouse("Not enough quantity in warehouse");
+                        throw new ProductInShoppingCartLowQuantityInWarehouse(
+                                "Not enough quantity in warehouse for product: " + productId +
+                                        ". Available: " + warehouseProduct.getQuantity() + ", requested: " + requestedQuantity
+                        );
                     }
 
                     if (warehouseProduct.getFragile() != null && warehouseProduct.getFragile()) {
