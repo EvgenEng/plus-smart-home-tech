@@ -38,7 +38,7 @@ public class ShoppingCartService {
         log.info("Adding products to cart for user: {}, products: {}", username, productList);
 
         try {
-            warehouseClient.checkProductQuantityEnoughForShoppingCart(productList); // ✅ Теперь совпадают типы
+            warehouseClient.checkProductQuantityEnoughForShoppingCart(productList);
         } catch (FeignException.NotFound e) {
             log.warn("Product not found in warehouse during cart addition");
             throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available in warehouse");
@@ -47,7 +47,7 @@ public class ShoppingCartService {
             throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
         }
 
-        ShoppingCart cart = addProductsToCart(username, productList); // ✅ УБРАЛ конвертацию - типы уже Integer
+        ShoppingCart cart = addProductsToCart(username, productList);
         return shoppingCartMapper.toDto(cart);
     }
 
@@ -68,7 +68,7 @@ public class ShoppingCartService {
                 username, request.getProductId(), request.getNewQuantity());
 
         try {
-            Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity().intValue()); // ✅ ИЗМЕНЕНО на Integer
+            Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity().intValue());
             warehouseClient.checkProductQuantityEnoughForShoppingCart(productQuantity);
         } catch (FeignException.NotFound e) {
             log.warn("Product not found in warehouse during quantity change");
