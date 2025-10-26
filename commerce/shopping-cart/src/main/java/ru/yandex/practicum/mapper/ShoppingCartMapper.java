@@ -11,6 +11,7 @@ public class ShoppingCartMapper {
     public ShoppingCartDto toDto(ShoppingCart shoppingCart) {
         if (shoppingCart == null) {
             return ShoppingCartDto.builder()
+                    .shoppingCartId(null)
                     .products(new HashMap<>())
                     .build();
         }

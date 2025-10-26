@@ -40,11 +40,14 @@ public class ShoppingCartService {
         try {
             warehouseClient.checkProductQuantityEnoughForShoppingCart(productList);
         } catch (FeignException.NotFound e) {
-            log.warn("Product not found in warehouse during cart addition");
-            throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available in warehouse");
+            log.warn("Product not found in warehouse: {}", e.getMessage());
+            throw new ProductInShoppingCartLowQuantityInWarehouse("One or more products not available in warehouse");
         } catch (FeignException e) {
-            log.error("Warehouse service error during cart addition: {}", e.getMessage());
+            log.error("Warehouse service error: {}", e.getMessage());
             throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
+        } catch (Exception e) {
+            log.error("Unexpected error during warehouse check: {}", e.getMessage());
+            throw new WarehouseServiceUnavailableException("Warehouse service error");
         }
 
         ShoppingCart cart = addProductsToCart(username, productList);
@@ -68,17 +71,20 @@ public class ShoppingCartService {
                 username, request.getProductId(), request.getNewQuantity());
 
         try {
-            Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity().intValue());
+            Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity());
             warehouseClient.checkProductQuantityEnoughForShoppingCart(productQuantity);
         } catch (FeignException.NotFound e) {
-            log.warn("Product not found in warehouse during quantity change");
+            log.warn("Product not found in warehouse: {}", e.getMessage());
             throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available in warehouse");
         } catch (FeignException e) {
-            log.error("Warehouse service error during quantity change: {}", e.getMessage());
+            log.error("Warehouse service error: {}", e.getMessage());
             throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
+        } catch (Exception e) {
+            log.error("Unexpected error during warehouse check: {}", e.getMessage());
+            throw new WarehouseServiceUnavailableException("Warehouse service error");
         }
 
-        ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity().intValue());
+        ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity());
         return shoppingCartMapper.toDto(cart);
     }
 
@@ -91,6 +97,10 @@ public class ShoppingCartService {
     public ShoppingCart addProductsToCart(String username, Map<UUID, Integer> products) {
         ShoppingCart cart = getOrCreateShoppingCart(username);
 
+        if (cart.getProducts() == null) {
+            cart.setProducts(new java.util.HashMap<>());
+        }
+
         products.forEach((productId, quantity) -> {
             cart.getProducts().merge(productId, quantity, Integer::sum);
         });
@@ -102,11 +112,15 @@ public class ShoppingCartService {
     public ShoppingCart removeProductsFromCart(String username, List<UUID> productIds) {
         ShoppingCart cart = getOrCreateShoppingCart(username);
 
+        if (cart.getProducts() == null || cart.getProducts().isEmpty()) {
+            throw new NoProductsInShoppingCartException("No products found in cart");
+        }
+
         boolean removed = productIds.stream()
                 .anyMatch(productId -> cart.getProducts().remove(productId) != null);
 
         if (!removed) {
-            throw new NoProductsInShoppingCartException("No products found in cart");
+            throw new NoProductsInShoppingCartException("No specified products found in cart");
         }
 
         return shoppingCartRepository.save(cart);
@@ -116,7 +130,7 @@ public class ShoppingCartService {
     public ShoppingCart changeProductQuantityInternal(String username, UUID productId, Integer newQuantity) {
         ShoppingCart cart = getOrCreateShoppingCart(username);
 
-        if (!cart.getProducts().containsKey(productId)) {
+        if (cart.getProducts() == null || !cart.getProducts().containsKey(productId)) {
             throw new NoProductsInShoppingCartException("Product not found in cart");
         }
 
@@ -127,7 +141,7 @@ public class ShoppingCartService {
     @Transactional
     public void deactivateShoppingCart(String username) {
         ShoppingCart cart = shoppingCartRepository.findByUsernameAndActiveTrue(username)
-                .orElseThrow(() -> new NoProductsInShoppingCartException("Cart not found"));
+                .orElseThrow(() -> new NoProductsInShoppingCartException("Active cart not found for user: " + username));
 
         cart.setActive(false);
         shoppingCartRepository.save(cart);

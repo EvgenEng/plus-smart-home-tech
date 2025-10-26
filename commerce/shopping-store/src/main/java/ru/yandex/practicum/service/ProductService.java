@@ -21,11 +21,14 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     public Page<Product> getProductsByCategory(ProductCategory category, Pageable pageable) {
-        return productRepository.findByProductCategoryAndProductState(category, ProductState.ACTIVE, pageable);
+        return productRepository.findByProductCategory(category, pageable);
     }
 
     @Transactional
     public Product createProduct(Product product) {
+        if (product.getProductState() == null) {
+            product.setProductState(ProductState.ACTIVE);
+        }
         return productRepository.save(product);
     }
 
@@ -62,6 +65,6 @@ public class ProductService {
 
     public Product getActiveProduct(UUID productId) {
         return productRepository.findByProductIdAndProductState(productId, ProductState.ACTIVE)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+                .orElseThrow(() -> new ProductNotFoundException("Active product not found"));
     }
 }
