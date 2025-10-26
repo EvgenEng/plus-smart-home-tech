@@ -8,9 +8,12 @@ import ru.yandex.practicum.client.WarehouseClient;
 import ru.yandex.practicum.dto.ChangeProductQuantityRequest;
 import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.exception.NoProductsInShoppingCartException;
+import ru.yandex.practicum.exception.ProductInShoppingCartLowQuantityInWarehouse;
+import ru.yandex.practicum.exception.WarehouseServiceUnavailableException;
 import ru.yandex.practicum.mapper.ShoppingCartMapper;
 import ru.yandex.practicum.model.ShoppingCart;
 import ru.yandex.practicum.repository.ShoppingCartRepository;
+import feign.FeignException;
 
 import java.util.List;
 import java.util.Map;
@@ -32,11 +35,19 @@ public class ShoppingCartService {
 
     @Transactional
     public ShoppingCartDto addProductToShoppingCart(String username, Map<UUID, Integer> productList) {
-        Map<UUID, Long> productListLong = convertToLongMap(productList);
+        log.info("Adding products to cart for user: {}, products: {}", username, productList);
 
-        warehouseClient.checkProductQuantityEnoughForShoppingCart(productListLong);
+        try {
+            warehouseClient.checkProductQuantityEnoughForShoppingCart(productList); // ✅ Теперь совпадают типы
+        } catch (FeignException.NotFound e) {
+            log.warn("Product not found in warehouse during cart addition");
+            throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available in warehouse");
+        } catch (FeignException e) {
+            log.error("Warehouse service error during cart addition: {}", e.getMessage());
+            throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
+        }
 
-        ShoppingCart cart = addProductsToCart(username, productList);
+        ShoppingCart cart = addProductsToCart(username, productList); // ✅ УБРАЛ конвертацию - типы уже Integer
         return shoppingCartMapper.toDto(cart);
     }
 
@@ -53,10 +64,21 @@ public class ShoppingCartService {
 
     @Transactional
     public ShoppingCartDto changeProductQuantity(String username, ChangeProductQuantityRequest request) {
-        Map<UUID, Long> productQuantity = Map.of(request.getProductId(), request.getNewQuantity().longValue());
-        warehouseClient.checkProductQuantityEnoughForShoppingCart(productQuantity);
+        log.info("Changing product quantity for user: {}, product: {}, quantity: {}",
+                username, request.getProductId(), request.getNewQuantity());
 
-        ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity());
+        try {
+            Map<UUID, Integer> productQuantity = Map.of(request.getProductId(), request.getNewQuantity().intValue()); // ✅ ИЗМЕНЕНО на Integer
+            warehouseClient.checkProductQuantityEnoughForShoppingCart(productQuantity);
+        } catch (FeignException.NotFound e) {
+            log.warn("Product not found in warehouse during quantity change");
+            throw new ProductInShoppingCartLowQuantityInWarehouse("Product not available in warehouse");
+        } catch (FeignException e) {
+            log.error("Warehouse service error during quantity change: {}", e.getMessage());
+            throw new WarehouseServiceUnavailableException("Warehouse service temporarily unavailable");
+        }
+
+        ShoppingCart cart = changeProductQuantityInternal(username, request.getProductId(), request.getNewQuantity().intValue());
         return shoppingCartMapper.toDto(cart);
     }
 
@@ -118,11 +140,5 @@ public class ShoppingCartService {
                 .products(new java.util.HashMap<>())
                 .build();
         return shoppingCartRepository.save(newCart);
-    }
-
-    private Map<UUID, Long> convertToLongMap(Map<UUID, Integer> intMap) {
-        Map<UUID, Long> longMap = new java.util.HashMap<>();
-        intMap.forEach((key, value) -> longMap.put(key, value.longValue()));
-        return longMap;
     }
 }

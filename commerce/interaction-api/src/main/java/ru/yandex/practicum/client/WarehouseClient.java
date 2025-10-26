@@ -30,5 +30,5 @@ public interface WarehouseClient {
     BookedProductsDto checkProductQuantity(@RequestBody ShoppingCartDto shoppingCart);
 
     @PostMapping("/api/v1/warehouse/check-quantity")
-    void checkProductQuantityEnoughForShoppingCart(@RequestBody Map<UUID, Long> productList);
+    void checkProductQuantityEnoughForShoppingCart(@RequestBody Map<UUID, Integer> productList);
 }
