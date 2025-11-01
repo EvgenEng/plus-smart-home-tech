@@ -4,12 +4,20 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.client.WarehouseClient;
 import ru.yandex.practicum.dto.AddProductToWarehouseRequest;
 import ru.yandex.practicum.dto.AddressDto;
+import ru.yandex.practicum.dto.AssemblyProductsForOrderRequest;
 import ru.yandex.practicum.dto.BookedProductsDto;
 import ru.yandex.practicum.dto.NewProductInWarehouseRequest;
+import ru.yandex.practicum.dto.ShippedToDeliveryRequest;
 import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.service.WarehouseService;
 
@@ -67,5 +75,28 @@ public class WarehouseController implements WarehouseClient {
         shoppingCartDto.setProducts(productList);
 
         warehouseService.checkProductQuantity(shoppingCartDto);
+    }
+
+    @Override
+    @PostMapping("/assembly")
+    public BookedProductsDto assemblyProductsForOrder(@RequestBody AssemblyProductsForOrderRequest request) {
+        log.info("Assembly products for order: {}", request.getOrderId());
+        return warehouseService.assemblyProductsForOrder(request);
+    }
+
+    @Override
+    @PostMapping("/shipped")
+    @ResponseStatus(HttpStatus.OK)
+    public void shippedToDelivery(@RequestBody ShippedToDeliveryRequest request) {
+        log.info("Shipped to delivery - order: {}, delivery: {}", request.getOrderId(), request.getDeliveryId());
+        warehouseService.shippedToDelivery(request);
+    }
+
+    @Override
+    @PostMapping("/return")
+    @ResponseStatus(HttpStatus.OK)
+    public void acceptReturn(@RequestBody Map<UUID, Integer> products) {
+        log.info("Accept return for products: {}", products);
+        warehouseService.acceptReturn(products);
     }
 }
