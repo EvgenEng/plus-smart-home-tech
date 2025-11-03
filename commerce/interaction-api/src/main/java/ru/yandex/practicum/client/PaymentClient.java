@@ -20,7 +20,7 @@ public interface PaymentClient {
     @PostMapping("/api/v1/payment")
     PaymentDto payment(@RequestBody OrderDto orderDto);
 
-    @PostMapping("/api/v1/payment/refund")
+    @PostMapping("/api/v1/payment/success")
     void paymentSuccess(@RequestBody UUID paymentId);
 
     @PostMapping("/api/v1/payment/failed")

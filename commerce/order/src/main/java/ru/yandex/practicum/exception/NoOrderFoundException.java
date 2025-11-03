@@ -1,4 +1,3 @@
-// order/src/main/java/ru/yandex/practicum/exception/NoOrderFoundException.java
 package ru.yandex.practicum.exception;
 
 import lombok.AllArgsConstructor;

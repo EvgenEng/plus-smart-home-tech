@@ -20,7 +20,7 @@ public interface OrderClient {
     List<OrderDto> getClientOrders(@RequestParam String username);
 
     @PutMapping("/api/v1/order")
-    OrderDto createNewOrder(@RequestBody CreateNewOrderRequest request);
+    OrderDto createNewOrder(@RequestBody CreateNewOrderRequest request, @RequestParam String username);
 
     @PostMapping("/api/v1/order/return")
     OrderDto productReturn(@RequestBody ProductReturnRequest request);

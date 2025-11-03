@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.client.OrderClient;
 import ru.yandex.practicum.client.WarehouseClient;
 import ru.yandex.practicum.dto.AddressDto;
+import ru.yandex.practicum.dto.DeliveryCostRequest;
 import ru.yandex.practicum.dto.DeliveryDto;
 import ru.yandex.practicum.dto.DeliveryState;
 import ru.yandex.practicum.dto.OrderDto;
@@ -16,7 +17,6 @@ import ru.yandex.practicum.exception.NoDeliveryFoundException;
 import ru.yandex.practicum.mapper.DeliveryMapper;
 import ru.yandex.practicum.model.Delivery;
 import ru.yandex.practicum.repository.DeliveryRepository;
-
 
 import java.util.UUID;
 
@@ -41,15 +41,17 @@ public class DeliveryService {
         return deliveryMapper.toDto(savedDelivery);
     }
 
-    public Double deliveryCost(OrderDto orderDto) {
-        if (orderDto == null) {
+    public Double deliveryCost(DeliveryCostRequest request) {
+        if (request == null || request.getOrder() == null || request.getDeliveryAddress() == null) {
             throw new NoDeliveryFoundException(
-                    "Order is required for delivery cost calculation",
-                    "Order not found",
-                    org.springframework.http.HttpStatus.BAD_REQUEST
+                    "Order and delivery address are required for delivery cost calculation",
+                    "Order information incomplete",
+                    HttpStatus.BAD_REQUEST
             );
         }
 
+        OrderDto orderDto = request.getOrder();
+        AddressDto deliveryAddress = request.getDeliveryAddress();
         double baseCost = 5.0;
         double totalCost = baseCost;
 
@@ -62,7 +64,7 @@ public class DeliveryService {
         }
 
         if (Boolean.TRUE.equals(orderDto.getFragile())) {
-            totalCost += totalCost * 0.2; // +20%
+            totalCost += totalCost * 0.2;
         }
 
         if (orderDto.getDeliveryWeight() != null) {
@@ -73,7 +75,10 @@ public class DeliveryService {
             totalCost += orderDto.getDeliveryVolume() * 0.2;
         }
 
-        totalCost += totalCost * 0.2; // +20% за другой адрес
+        if (!warehouseAddress.getStreet().equals(deliveryAddress.getStreet())) {
+            totalCost += totalCost * 0.2; // +20% за другой адрес
+            log.info("Applied 20% surcharge for different street delivery");
+        }
 
         log.info("Calculated delivery cost: {} for order: {}", totalCost, orderDto.getOrderId());
         return totalCost;
@@ -123,7 +128,7 @@ public class DeliveryService {
                 .orElseThrow(() -> new NoDeliveryFoundException(
                         "Delivery not found for order: " + orderId,
                         "Delivery not found",
-                        org.springframework.http.HttpStatus.NOT_FOUND
+                        HttpStatus.NOT_FOUND
                 ));
     }
 }

@@ -31,7 +31,7 @@ public class PaymentController implements PaymentClient {
     }
 
     @Override
-    @PostMapping("/refund")
+    @PostMapping("/success")
     public void paymentSuccess(@RequestBody UUID paymentId) {
         paymentService.paymentSuccess(paymentId);
     }

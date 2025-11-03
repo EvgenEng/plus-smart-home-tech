@@ -1,4 +1,3 @@
-// order/src/main/java/ru/yandex/practicum/controller/OrderController.java
 package ru.yandex.practicum.controller;
 
 import lombok.RequiredArgsConstructor;
@@ -32,8 +31,8 @@ public class OrderController implements OrderClient {
 
     @Override
     @PutMapping
-    public OrderDto createNewOrder(@RequestBody CreateNewOrderRequest request) {
-        String username = "currentUser";
+    public OrderDto createNewOrder(@RequestBody CreateNewOrderRequest request,
+                                   @RequestParam String username) {
         return orderService.createNewOrder(request, username);
     }
 

@@ -8,14 +8,22 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.client.DeliveryClient;
 import ru.yandex.practicum.client.PaymentClient;
 import ru.yandex.practicum.client.WarehouseClient;
-import ru.yandex.practicum.dto.*;
+import ru.yandex.practicum.dto.AddressDto;
+import ru.yandex.practicum.dto.AssemblyProductsForOrderRequest;
+import ru.yandex.practicum.dto.BookedProductsDto;
+import ru.yandex.practicum.dto.CreateNewOrderRequest;
+import ru.yandex.practicum.dto.DeliveryCostRequest;
+import ru.yandex.practicum.dto.OrderDto;
+import ru.yandex.practicum.dto.OrderState;
+import ru.yandex.practicum.dto.PaymentDto;
+import ru.yandex.practicum.dto.ProductReturnRequest;
 import ru.yandex.practicum.exception.NoOrderFoundException;
+import ru.yandex.practicum.exception.NotAuthorizedUserException;
 import ru.yandex.practicum.mapper.OrderMapper;
 import ru.yandex.practicum.model.Order;
 import ru.yandex.practicum.repository.OrderRepository;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,7 +40,7 @@ public class OrderService {
 
     public List<OrderDto> getClientOrders(String username) {
         if (username == null || username.isBlank()) {
-            throw new NotAuthorizedUserException("Username is required", "User not authorized", HttpStatus.UNAUTHORIZED);
+            throw new NotAuthorizedUserException("Username is required");
         }
 
         return orderRepository.findByUsername(username).stream()
@@ -44,7 +52,7 @@ public class OrderService {
     public OrderDto createNewOrder(CreateNewOrderRequest request, String username) {
         log.info("Creating new order for user: {}", username);
 
-        warehouseClient.checkProductQuantityEnoughForShoppingCart((Map<UUID, Integer>) request.getShoppingCart());
+        warehouseClient.checkProductQuantityEnoughForShoppingCart(request.getShoppingCart().getProducts());
 
         BookedProductsDto bookedProducts = warehouseClient.checkProductQuantity(request.getShoppingCart());
 
@@ -72,7 +80,11 @@ public class OrderService {
         Double productCost = paymentClient.productCost(orderDto);
         order.setProductPrice(productCost);
 
-        Double deliveryCost = deliveryClient.deliveryCost(orderDto);
+        DeliveryCostRequest deliveryRequest = DeliveryCostRequest.builder()
+                .order(orderDto)
+                .deliveryAddress(new AddressDto())
+                .build();
+        Double deliveryCost = deliveryClient.deliveryCost(deliveryRequest);
         order.setDeliveryPrice(deliveryCost);
 
         Double totalCost = paymentClient.getTotalCost(orderDto);
@@ -159,7 +171,11 @@ public class OrderService {
         Order order = getOrderById(orderId);
         OrderDto orderDto = orderMapper.toDto(order);
 
-        Double deliveryCost = deliveryClient.deliveryCost(orderDto);
+        DeliveryCostRequest deliveryRequest = DeliveryCostRequest.builder()
+                .order(orderDto)
+                .deliveryAddress(new AddressDto())
+                .build();
+        Double deliveryCost = deliveryClient.deliveryCost(deliveryRequest);
         order.setDeliveryPrice(deliveryCost);
 
         Order updatedOrder = orderRepository.save(order);

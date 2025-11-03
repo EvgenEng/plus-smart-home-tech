@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.client.DeliveryClient;
+import ru.yandex.practicum.dto.DeliveryCostRequest;
 import ru.yandex.practicum.dto.DeliveryDto;
 import ru.yandex.practicum.dto.OrderDto;
 import ru.yandex.practicum.service.DeliveryService;
@@ -45,7 +46,7 @@ public class DeliveryController implements DeliveryClient {
 
     @Override
     @PostMapping("/cost")
-    public Double deliveryCost(@RequestBody OrderDto orderDto) {
-        return deliveryService.deliveryCost(orderDto);
+    public Double deliveryCost(@RequestBody DeliveryCostRequest request) {  // Изменен параметр
+        return deliveryService.deliveryCost(request);
     }
 }
