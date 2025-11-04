@@ -7,7 +7,12 @@ spring:
     config:
       server:
         native:
-          search-locations: classpath:/config
+          search-locations:
+            - classpath:/config
+            - classpath:/config/commerce
+            - classpath:/config/infra
+            - classpath:/config/telemetry
+            - classpath:/config/infra/gateway
 
 server:
   port: 8888
@@ -27,11 +32,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,refresh
+        include: health,info,refresh,gateway
   endpoint:
     health:
       show-details: always
     refresh:
+      enabled: true
+    gateway:
       enabled: true
 
 logging:

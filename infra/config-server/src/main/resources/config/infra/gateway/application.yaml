@@ -1,0 +1,141 @@
+# infra/config-server/src/main/resources/config/infra/gateway/application.yml
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        # Роут для сервиса корзины покупок
+        - id: shopping_cart_service_route
+          uri: lb://shopping-cart
+          predicates:
+            - Path=/shopping-cart/**
+          filters:
+            - PrefixPath=/api/v1
+            - name: CircuitBreaker
+              args:
+                name: shoppingCartCircuitBreaker
+                fallbackUri: forward:/fallback/shopping-cart
+
+        # Роут для сервиса витрины товаров
+        - id: shopping_store_service_route
+          uri: lb://shopping-store
+          predicates:
+            - Path=/shopping-store/**
+          filters:
+            - PrefixPath=/api/v1
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET,POST,PUT
+            - name: CircuitBreaker
+              args:
+                name: shoppingStoreCircuitBreaker
+                fallbackUri: forward:/fallback/shopping-store
+
+        # Роут для сервиса склада
+        - id: warehouse_service_route
+          uri: lb://warehouse
+          predicates:
+            - Path=/warehouse/**
+          filters:
+            - PrefixPath=/api/v1
+            - name: CircuitBreaker
+              args:
+                name: warehouseCircuitBreaker
+                fallbackUri: forward:/fallback/warehouse
+
+        # Роут для сервиса заказов
+        - id: order_service_route
+          uri: lb://order
+          predicates:
+            - Path=/order/**
+          filters:
+            - PrefixPath=/api/v1
+            - name: CircuitBreaker
+              args:
+                name: orderCircuitBreaker
+                fallbackUri: forward:/fallback/order
+
+        # Роут для сервиса оплаты
+        - id: payment_service_route
+          uri: lb://payment
+          predicates:
+            - Path=/payment/**
+          filters:
+            - PrefixPath=/api/v1
+            - name: CircuitBreaker
+              args:
+                name: paymentCircuitBreaker
+                fallbackUri: forward:/fallback/payment
+
+        # Роут для сервиса доставки
+        - id: delivery_service_route
+          uri: lb://delivery
+          predicates:
+            - Path=/delivery/**
+          filters:
+            - PrefixPath=/api/v1
+            - name: CircuitBreaker
+              args:
+                name: deliveryCircuitBreaker
+                fallbackUri: forward:/fallback/delivery
+
+      default-filters:
+        - AddResponseHeader=X-Gateway-Processed, true
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 5s
+
+# Настройки Resilience4j Circuit Breaker
+resilience4j:
+  circuitbreaker:
+    instances:
+      shoppingCartCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+      shoppingStoreCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+      warehouseCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+      orderCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+      paymentCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+      deliveryCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
